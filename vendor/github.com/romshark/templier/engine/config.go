@@ -1,0 +1,341 @@
+// Package engine provides the core templier engine for programmatic use.
+// It allows running templier as a library without the CLI.
+package engine
+
+import (
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/url"
+	"os/exec"
+	"runtime/debug"
+	"slices"
+	"time"
+
+	"github.com/romshark/templier/internal/cmdrun"
+
+	"github.com/bmatcuk/doublestar/v4"
+)
+
+// supportedTemplVersion returns the version of github.com/a-h/templ
+// that the engine was compiled against, read from the embedded build info.
+func supportedTemplVersion() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, dep := range info.Deps {
+			if dep.Path == "github.com/a-h/templ" {
+				if dep.Replace != nil {
+					return dep.Replace.Version
+				}
+				return dep.Version
+			}
+		}
+	}
+	return ""
+}
+
+// ActionType defines what action a custom watcher requires after a file change.
+type ActionType int8
+
+const (
+	// ActionNone means no further action is required; just execute the command.
+	ActionNone ActionType = iota
+	// ActionReload requires browser tabs to be reloaded.
+	ActionReload
+	// ActionRestart requires the server process to be restarted.
+	ActionRestart
+	// ActionRebuild requires the server to be rebuilt and restarted.
+	ActionRebuild
+)
+
+// LogLevel defines the verbosity of logging.
+type LogLevel int8
+
+const (
+	// LogLevelError logs errors only.
+	LogLevelError LogLevel = iota
+	// LogLevelVerbose enables verbose logging of relevant events.
+	LogLevelVerbose
+	// LogLevelDebug enables verbose debug logging.
+	LogLevelDebug
+)
+
+// LogClearOn defines when to clear logs.
+type LogClearOn int8
+
+const (
+	// LogClearNever disables log clearing.
+	LogClearNever LogClearOn = iota
+	// LogClearOnRestart clears logs when the app server restarts.
+	LogClearOnRestart
+	// LogClearOnFileChange clears logs on every file change.
+	LogClearOnFileChange
+)
+
+// Config is the configuration for the templier engine.
+type Config struct {
+	// App defines the application being developed.
+	App AppConfig
+
+	// Compiler configures the Go compiler. Nil means default compiler settings.
+	Compiler *CompilerConfig
+
+	// Debounce is the duration to wait before triggering a rebuild
+	// after a file change. Zero means 50ms default.
+	Debounce time.Duration
+
+	// ProxyTimeout for proxied requests to the app server.
+	// Zero means 2s default.
+	ProxyTimeout time.Duration
+
+	// Lint enables golangci-lint before building.
+	Lint bool
+
+	// Format enables automatic templ formatting on .templ file changes.
+	Format bool
+
+	// TemplierHost is the host:port for the templier proxy server.
+	// Example: "127.0.0.1:9999".
+	TemplierHost string
+
+	// TLS enables TLS for the templier proxy server. Nil means plain HTTP.
+	TLS *TLSConfig
+
+	// CustomWatchers defines additional file watchers with custom commands.
+	CustomWatchers []CustomWatcherConfig
+
+	// WatcherIgnore lists glob patterns (relative to App.DirSrcRoot) fully
+	// excluded from the fs watcher — no events at all, unlike AppConfig.Exclude
+	// which only gates rebuilds.
+	WatcherIgnore []string
+
+	// Log configures logging behavior.
+	Log LogConfig
+
+	// ReconnectMessage is the message shown in the browser overlay
+	// when the WebSocket connection to the dev server is lost.
+	// Empty means "reconnecting...".
+	ReconnectMessage string
+}
+
+// AppConfig defines the application being developed.
+type AppConfig struct {
+	// DirSrcRoot is the absolute path to the source root directory to watch.
+	DirSrcRoot string
+
+	// Exclude is a list of glob patterns for files that must not trigger an
+	// app rebuild/restart. Matched files are still watched, so custom
+	// watchers still fire for them; use WatcherIgnore to drop paths entirely.
+	Exclude []string
+
+	// DirCmd is the path to the Go command to build (e.g., "./cmd/server/").
+	DirCmd string
+
+	// DirWork is the working directory for building and running the app server.
+	DirWork string
+
+	// Flags are flags passed to the app server binary on startup.
+	Flags []string
+
+	// Host is the app server's URL for health checks and reverse proxying.
+	Host *url.URL
+}
+
+// CompilerConfig configures the Go compiler.
+type CompilerConfig struct {
+	// Flags are pre-assembled compiler flags
+	// (e.g. ["-gcflags", "all=-N -l", "-race"]).
+	Flags []string
+
+	// Env are environment variables for the compiler (e.g. ["GOARCH=amd64"]).
+	Env []string
+}
+
+// TLSConfig configures TLS for the templier proxy server.
+type TLSConfig struct {
+	Cert string
+	Key  string
+}
+
+// LogConfig configures logging behavior.
+type LogConfig struct {
+	// Level controls the verbosity of logging.
+	Level LogLevel
+
+	// ClearOn defines when to clear log output.
+	ClearOn LogClearOn
+
+	// PrintJSDebugLogs enables debug logs in the injected browser JavaScript.
+	PrintJSDebugLogs bool
+}
+
+// CustomWatcherConfig defines a custom file watcher with an associated command.
+type CustomWatcherConfig struct {
+	// Name is the display name for the custom watcher.
+	Name string
+
+	// Cmd is the shell command to run when an included file changes.
+	// Executed via "sh -c". Optional if Requires is set.
+	Cmd string
+
+	// Include specifies glob patterns for what files to watch.
+	Include []string
+
+	// Exclude specifies glob patterns for what files to ignore
+	// that would otherwise match Include.
+	Exclude []string
+
+	// Debounce defines how long to wait for more file changes
+	// before executing Cmd. Zero means 50ms default.
+	Debounce time.Duration
+
+	// FailOnErr shows the command's error output in the browser
+	// (like a build error) when the command exits with code 1.
+	FailOnErr bool
+
+	// Requires defines what action is required when an included file changes.
+	Requires ActionType
+}
+
+// Validate checks the configuration for errors.
+func (c *Config) Validate() error {
+	if c.TemplierHost == "" {
+		return errors.New("engine: TemplierHost is required")
+	}
+	if c.App.DirSrcRoot == "" {
+		return errors.New("engine: App.DirSrcRoot is required")
+	}
+	if c.App.DirCmd == "" {
+		return errors.New("engine: App.DirCmd is required")
+	}
+	if c.App.DirWork == "" {
+		return errors.New("engine: App.DirWork is required")
+	}
+	if c.App.Host == nil {
+		return errors.New("engine: App.Host is required")
+	}
+	if c.TLS != nil {
+		if c.TLS.Cert == "" {
+			return errors.New("engine: TLS.Cert is required when TLS is set")
+		}
+		if c.TLS.Key == "" {
+			return errors.New("engine: TLS.Key is required when TLS is set")
+		}
+	}
+
+	// Validate glob patterns.
+	for i, pattern := range c.App.Exclude {
+		if !doublestar.ValidatePattern(pattern) {
+			return fmt.Errorf("engine: App.Exclude[%d] invalid glob pattern %q", i, pattern)
+		}
+	}
+	for i, pattern := range c.WatcherIgnore {
+		if !doublestar.ValidatePattern(pattern) {
+			return fmt.Errorf("engine: WatcherIgnore[%d] invalid glob pattern %q", i, pattern)
+		}
+	}
+	for i, w := range c.CustomWatchers {
+		if w.Name == "" {
+			return fmt.Errorf("engine: CustomWatchers[%d] has no name", i)
+		}
+		if w.Requires == ActionNone && w.Cmd == "" {
+			return fmt.Errorf(
+				"engine: CustomWatchers[%d] %q requires no action, cmd must not be empty",
+				i, w.Name,
+			)
+		}
+		for j, pattern := range w.Include {
+			if !doublestar.ValidatePattern(pattern) {
+				return fmt.Errorf(
+					"engine: CustomWatchers[%d].Include[%d] invalid glob pattern %q",
+					i, j, pattern,
+				)
+			}
+		}
+		for j, pattern := range w.Exclude {
+			if !doublestar.ValidatePattern(pattern) {
+				return fmt.Errorf(
+					"engine: CustomWatchers[%d].Exclude[%d] invalid glob pattern %q",
+					i, j, pattern,
+				)
+			}
+		}
+	}
+
+	// Check required binaries.
+	if _, err := exec.LookPath("templ"); err != nil {
+		return fmt.Errorf("engine: templ is not installed or not in PATH: %w", err)
+	}
+	if c.Lint {
+		if _, err := exec.LookPath("golangci-lint"); err != nil {
+			return fmt.Errorf(
+				"engine: golangci-lint is not installed or not in PATH "+
+					"(required when Lint is enabled): %w", err,
+			)
+		}
+	}
+	// Custom watcher commands are executed through a shell, hence it's the
+	// shell that must be available. The commands themselves are only checked
+	// in checkCustomWatcherCmds because they may well be shell builtins,
+	// aliases or functions which LookPath can't resolve.
+	if slices.ContainsFunc(c.CustomWatchers, func(w CustomWatcherConfig) bool {
+		return w.Cmd != ""
+	}) {
+		shell := cmdrun.ShellName()
+		if _, err := exec.LookPath(shell); err != nil {
+			return fmt.Errorf(
+				"engine: shell %q is required to run custom watcher "+
+					"commands but wasn't found in PATH: %w", shell, err,
+			)
+		}
+	}
+
+	return nil
+}
+
+// checkCustomWatcherCmds warns about custom watcher commands that can't be
+// resolved in PATH.
+//
+// This is only a warning because the command is executed through a shell
+// where it may well be a builtin, an alias or a function that can't be
+// resolved by looking it up in PATH.
+func (c *Config) checkCustomWatcherCmds(logger *slog.Logger) {
+	for _, w := range c.CustomWatchers {
+		if w.Cmd == "" {
+			continue
+		}
+		cmd := cmdFromString(w.Cmd)
+		if _, err := exec.LookPath(cmd); err != nil {
+			logger.Warn("custom watcher command isn't installed "+
+				"on your system or is not in your PATH",
+				"watcher", w.Name, "cmd", cmd)
+		}
+	}
+}
+
+// cmdFromString extracts the command name (first word) from a shell command string.
+func cmdFromString(s string) string {
+	for i, c := range s {
+		if c == ' ' || c == '\t' {
+			return s[:i]
+		}
+	}
+	return s
+}
+
+// applyDefaults fills in zero-valued fields with sensible defaults.
+func (c *Config) applyDefaults() {
+	if c.Debounce == 0 {
+		c.Debounce = 50 * time.Millisecond
+	}
+	if c.ProxyTimeout == 0 {
+		c.ProxyTimeout = 2 * time.Second
+	}
+	for i := range c.CustomWatchers {
+		if c.CustomWatchers[i].Debounce == 0 {
+			c.CustomWatchers[i].Debounce = 50 * time.Millisecond
+		}
+	}
+	if c.ReconnectMessage == "" {
+		c.ReconnectMessage = "reconnecting..."
+	}
+}

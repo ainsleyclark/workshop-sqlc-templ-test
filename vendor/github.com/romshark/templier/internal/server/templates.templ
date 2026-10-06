@@ -1,0 +1,178 @@
+package server
+
+import "github.com/romshark/templier/internal/ansihtml"
+
+templ pageError(
+	title string,
+	content []Report,
+	printDebugLogs bool, wsEventsEndpoint string, reconnectMessage string,
+) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title }</title>
+			<style>
+				:root {
+					--background-color: rgb(0,0,0);
+					--text-color: #e6e6e6;
+					--header-color: #ff6b6b;
+				}
+
+				@media (prefers-color-scheme: light) {
+					:root {
+						--background-color: rgb(255,255,255);
+						--text-color: #1a1a1a;
+						--header-color: #c0392b;
+					}
+				}
+
+				body {
+					font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+					box-sizing: border-box;
+					margin: 0;
+					padding: 1rem;
+					background-color: var(--background-color);
+					color: var(--text-color);
+				}
+
+				body > h3 {
+					margin-top: 0;
+					color: var(--header-color);
+				}
+
+				body > pre {
+					white-space: pre-wrap;
+					color: var(--text-color);
+				}
+
+				.ansi-bold { font-weight: bold; }
+				.ansi-dim { opacity: 0.65; }
+				.ansi-fg-black   { color: #6b6b6b; }
+				.ansi-fg-red     { color: #ff6b6b; }
+				.ansi-fg-green   { color: #7bd88f; }
+				.ansi-fg-yellow  { color: #f1d94f; }
+				.ansi-fg-blue    { color: #6fa8ff; }
+				.ansi-fg-magenta { color: #d98cff; }
+				.ansi-fg-cyan    { color: #5bd5e6; }
+				.ansi-fg-white   { color: #f2f2f2; }
+
+				@media (prefers-color-scheme: light) {
+					.ansi-fg-red     { color: #c0392b; }
+					.ansi-fg-green   { color: #1e7b3e; }
+					.ansi-fg-yellow  { color: #b07e00; }
+					.ansi-fg-blue    { color: #1f5fa8; }
+					.ansi-fg-magenta { color: #8e44ad; }
+					.ansi-fg-cyan    { color: #0e7c86; }
+					.ansi-fg-white   { color: #1a1a1a; }
+				}
+			</style>
+		</head>
+		<body>
+			for i, c := range content {
+				<h3>{ c.Subject }</h3>
+				<pre>@templ.Raw(ansihtml.Convert(c.Body))</pre>
+				if i+1 != len(content) {
+					<hr/>
+				}
+			}
+			@jsInjection(printDebugLogs, wsEventsEndpoint, reconnectMessage)
+		</body>
+	</html>
+}
+
+templ jsInjection(printDebugLogs bool, wsEventsEndpoint string, reconnectMessage string) {
+	@templ.JSONScript("_templier__jsInjection", struct {
+		PrintDebugLogs   bool
+		WSEventsEndpoint string
+		ReconnectMessage string
+	}{
+		PrintDebugLogs:   printDebugLogs,
+		WSEventsEndpoint: wsEventsEndpoint,
+		ReconnectMessage: reconnectMessage,
+	})
+	<script type="text/javascript">
+		(() => {
+			if (window._templier__jsInjection_initialized === true) {
+				return
+			}
+			let params = JSON.parse(
+				document.getElementById('_templier__jsInjection').textContent
+			)
+
+			let reconnectingOverlay 
+			function showReconnecting() {
+				if (reconnectingOverlay != null) {
+					return
+				}
+				reconnectingOverlay = document.createElement('p')
+				reconnectingOverlay.innerHTML = '<span>' +
+					params.ReconnectMessage +
+					'</span>'
+				reconnectingOverlay.style.margin = 0
+				reconnectingOverlay.style.display = 'flex'
+				reconnectingOverlay.style.justifyContent = 'center'
+				reconnectingOverlay.style.alignItems = 'center'
+				reconnectingOverlay.style.position = 'fixed'
+				reconnectingOverlay.style.top = 0
+				reconnectingOverlay.style.left = 0
+				reconnectingOverlay.style.fontSize = '1.25rem'
+				reconnectingOverlay.style.width = '100%'
+				reconnectingOverlay.style.height = '100%'
+				reconnectingOverlay.style.zIndex = '9999'
+				reconnectingOverlay.style.background = 'rgba(0,0,0,.8)'
+				reconnectingOverlay.style.backdropFilter = 'blur(4px)'
+				reconnectingOverlay.style.color = 'white'
+				document.body.appendChild(reconnectingOverlay)
+			}
+			function hideReconnecting() {
+				if (reconnectingOverlay == null) {
+					return
+				}
+				reconnectingOverlay.remove()
+				reconnectingOverlay = null
+			}
+
+			const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+
+			function connectWebsocket() {
+				const wsURL = `${protocol}//${window.location.host}${params.WSEventsEndpoint}`
+				ws = new WebSocket(wsURL)
+				ws.onopen = function (e) {
+					if (reconnectingOverlay != null) {
+						window.location.reload()
+						return
+					}
+					hideReconnecting()
+					if (params.PrintDebugLogs) {
+						console.debug('templier: connectWebsocket connected')
+					}
+				}
+				if (params.PrintDebugLogs) {
+					ws.onerror = function (e) {
+						console.debug('templier: websocket connection error: ' + e.data)
+					}
+				}
+				ws.onmessage = function (e) {
+					switch (e.data) {
+					case 'r': // Reload
+						window.location.reload()
+					case 's': // Shutdown
+
+					}
+				}
+				ws.onclose = function (e) {
+					showReconnecting()
+					if (params.PrintDebugLogs) {
+						console.debug('templier: websocket disconnected, reconnecting...')
+					}
+					setTimeout(() => connectWebsocket(), 300)
+				}
+			}
+
+			connectWebsocket()
+			window._templier__jsInjection_initialized = true
+		})();
+	</script>
+}

@@ -1,0 +1,14 @@
+.git
+bin/
+Dockerfile
+.dockerignore
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+cmd/mockapi/
+architectures/
+.claude/
+.junie/
