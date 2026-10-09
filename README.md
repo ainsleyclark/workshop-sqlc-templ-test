@@ -12,11 +12,11 @@ you make the site your own in your fork and push it there.
 
 ## Before you start
 
-You need Go (the version in `go.mod`), Git and a GitHub account. GoLand is the editor used on
-the day; anything that runs `make` and `go` works.
+You need Go (the version in `go.mod`), Git and a GitHub account. GoLand is the preferred IDE for 
+this workshop, and you should have received a promo code to use it.
 
-1. **Fork this repository** on GitHub: the *Fork* button at the top of
-   https://github.com/ainsleyclark/workshop-sqlc-templ-test. If you have the GitHub CLI,
+1. **Fork this repository** on GitHub: the *Fork* button at the top
+   of https://github.com/ainsleyclark/workshop-sqlc-templ-test. If you have the GitHub CLI,
    `gh repo fork ainsleyclark/workshop-sqlc-templ-test --clone` forks and clones in one go.
 2. **Clone your fork** and open it:
 
@@ -25,11 +25,10 @@ the day; anything that runs `make` and `go` works.
    cd workshop-sqlc-templ-test
    ```
 
-   Open this folder in GoLand. The `go.mod` is at the root, so there is nothing else to point
+   Open this folder in the IDE. The `go.mod` is at the root, so there is nothing else to point 
    it at.
-3. **Run setup once.** It builds the Go tools the day needs from `vendor/`, so nothing is
-   downloaded, offers to install Claude Code for the Theming block, and points `upstream` at
-   the workshop repository so you can pull fixes:
+3. **Run setup once.** It builds the Go tools the day needs from `vendor/`, so nothing is 
+   downloaded, offers to install Claude Code for the Theming block.
 
    ```sh
    make setup
@@ -38,13 +37,14 @@ the day; anything that runs `make` and `go` works.
 ## During the day
 
 ```sh
-make run        # the interactive CLI: migrate, ingest sightings, list, weather, stats, web
+make run        # the interactive CLI: migrate, seed, ingest sightings, list, stats, web
 make web        # serve the site on :8080
 make web-hot    # the same, with templ hot reload
 make templ      # regenerate templ after editing a .templ file
 make sqlc       # regenerate sqlc after editing a query or migration
 make test       # the tests
 make update     # pull the instructor's latest changes
+make push       # commit everything and push it to your fork
 make help       # everything else
 ```
 
@@ -55,8 +55,8 @@ Open-Meteo bundled with the app, so it works offline and never hits GBIF's rate 
 by itself, and `make run-live` uses the real APIs instead. If the database gets into a
 mess, `git checkout workshop.db` puts back the copy you last committed.
 
-Commit and push to **your fork** as you go, `workshop.db` included, so the instructor can see what
-you've built.
+Commit and push to **your fork** as you go (`make push`), `workshop.db` included, so the instructor
+can see what you've built. `/design-site` does this for you after each of Claude's turns.
 
 ## Where things are
 

@@ -4,8 +4,8 @@ The conditions a sighting was seen in, from the weather already saved beside it:
 sky, the temperature, Open-Meteo's description in words, and the wind as a small arrow. Plain
 templ and CSS, no library.
 
-Weather is on every sighting once Block 2's ingest has run. Until then it's zero, and the
-component says so rather than hiding the sighting.
+Weather is on every sighting once the database is seeded (`go run . db seed`). Until then it's
+zero, and the component says so rather than hiding the sighting.
 
 | File | Copy to |
 |------|---------|
@@ -145,8 +145,8 @@ Then the readout wherever a sighting is shown, such as the card's `<dl>`:
 1. **The sprite once, a `<use>` per card.** Each card references a symbol by id instead of
    carrying eight paths, which matters when thousands of cards render. If every icon is blank,
    `WeatherIcons` isn't in the layout.
-2. **Zero weather shows as "No weather recorded".** Before Block 2 is finished, or in a copy that
-   hasn't ingested, every card says it. Never hide the sighting because its weather is missing.
+2. **Zero weather shows as "No weather recorded".** In a copy that hasn't been seeded, or for a
+   sighting the weather lookup missed, the card says it. Never hide the sighting because its weather is missing.
 3. **`Condition.Description` is already in words.** It was translated when the record was saved, so
    show it as it is. `sky()` only groups codes to pick an icon, and it covers the whole WMO table
    rather than Open-Meteo's short list, because the stored data spans it.

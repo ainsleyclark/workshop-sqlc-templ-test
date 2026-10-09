@@ -10,5 +10,6 @@ Dockerfile
 !.env.example
 cmd/mockapi/
 architectures/
+tools/
 .claude/
 .junie/

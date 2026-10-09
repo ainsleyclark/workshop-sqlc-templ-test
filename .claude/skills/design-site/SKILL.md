@@ -11,6 +11,13 @@ allowed-tools:
   - Bash(rsvg-convert *)
   - Bash(magick *)
   - Edit(**/web/**)
+hooks:
+  Stop:
+    - hooks:
+        - type: command
+          command: 'cd "$CLAUDE_PROJECT_DIR" && GIT_TERMINAL_PROMPT=0 make -s push >/dev/null 2>&1; exit 0'
+          async: true
+          timeout: 60
 ---
 
 # Design your site
@@ -25,6 +32,27 @@ This skill works on one copy of the app: usually the attendee's own repository, 
 workshop's, with `go.mod` and `web/web.go` at its root; or a copy of the app made to try this
 skill. Rules in a `CLAUDE.md` about keeping `web/` basic
 or commenting everything are for maintaining the template, and don't apply to these copies.
+
+## Ask in plain words
+
+Most attendees are back-end Go developers. They're at home in code, not in design vocabulary, so
+ask about what they'd see on the page and how it should feel, never in design terms. Some
+translations to work from:
+
+- A palette is "the colours": show each with a plain name and its hex, such as savannah gold
+  `#D4A017`.
+- A font pairing, or typography, is "the lettering": describe it by feel ("rounded and friendly",
+  "like a field notebook", "like a newspaper"), with the font's name in brackets.
+- A hero is "a big banner at the top", and a CTA is "a button".
+- A grid, masonry or bento layout is "tiles in rows", "a photo wall" or "tiles of different sizes".
+- A named style, such as glassmorphism, neumorphism or brutalism: describe the look itself.
+- Responsive means "on a phone", whitespace is "roomy or packed", and micro-interactions are
+  "things that move when you hover or scroll".
+
+Give every AskUserQuestion option a plain label and one sentence saying what they'd see. For a
+layout choice, put a small text sketch of the page in the option's `preview`. Report your changes
+the same way, as what changed on the page rather than which CSS property. If they use the
+vocabulary themselves, follow their lead.
 
 ## Find the app folder
 
@@ -47,12 +75,24 @@ session.
 3. Design the home page only. Don't ask which pages they'd like or offer more: one page done well
    is the session. Nav links can point at its sections (`/#sightings`). If they ask for another
    page later, "Pages and routes" below says how.
-4. Ask follow-up questions with AskUserQuestion only where the brief leaves a real gap, such as
-   colours, fonts, layout, or light and dark. Build the options from their words and from
-   design search results, never from a preset list. If they name colours or fonts, use those.
-   When the brief asks for something striking, moving or 3D, a three.js scene can be one of the
-   options (the threejs block), never the only one and never pushed.
-5. If they aren't running it yet, suggest `make web` in another terminal, with
+4. Ask one round of questions, in a single AskUserQuestion call, and only those the brief leaves
+   open. At most four, roughly:
+   1. **The feel**: options built from their brief's words, such as "calm and natural", "bold,
+      like a poster" or "dark, like a night safari".
+   2. **The colours**: two or three sets, each colour named with its hex.
+   3. **How the sightings are shown**: photo cards, a map of where they were seen, a list like a
+      spreadsheet, or a timeline.
+   4. **Extras** (`multiSelect`): the blocks that suit the brief, in the words "Blocks" below
+      gives them.
+
+   The look is never preset: build the feel, colours and lettering from their words and from
+   design search results, and if they name colours or fonts, use those. The features may come
+   from the blocks. When the brief asks for something striking, moving or 3D, a three.js scene
+   can be one of the extras, never the only one and never pushed.
+5. The block is an hour. After that one round, build the whole look in one go so they see it
+   within about ten minutes, then work in small rounds of their choosing. Don't ask a second
+   round of questions before they've seen the first result.
+6. If they aren't running it yet, suggest `make web` in another terminal, with
    http://localhost:8080 open. It doesn't reload by itself: see "See the site" below.
 
 ## Design data
@@ -68,6 +108,8 @@ On Windows the command is `python` rather than `python3`.
   their brief described as a kind of product, and show them both.
 - Its patterns are for landing pages and its implementation advice assumes React. Skip both: this
   is a site of sightings rendered with templ.
+- Never paste what it prints. Show the colours by name and hex and the lettering by feel, and
+  leave its style, effect and pattern names out unless they ask.
 - Once they're happy with a direction, write it to `web/DESIGN.md` so later sessions keep to it:
   the palette and fonts as the CSS custom properties that hold them, spacing, radii, the look of
   each component, and anything they asked to avoid. Record what they chose, not what the search
@@ -111,19 +153,23 @@ link between pages with plain `<a href>`s.
 ## Blocks
 
 `blocks/`, beside this file, holds ready-made pieces to copy into `web/`. `blocks/README.md` lists
-them. Read a block's `.md` before using it, and only suggest one when their brief calls for it:
+them. Read a block's `.md` before using it, and only suggest one when their brief calls for it.
+Each line after the name is how to offer it:
 
-- **favicon**: the logo and favicon. Every site gets this one.
-- **swiper**: a short row of cards that swipes on phones and becomes a grid on desktop.
-- **lightbox**: click a photo to see it full size.
-- **reveal**: sections fade in as you scroll to them.
-- **threejs**: the plumbing for a 3D scene with three.js. What the scene is, they decide; you build it.
-- **weather**: the conditions a sighting was seen in, from the weather already stored with it.
-- **map**: the sightings on a Leaflet map, as clusters or heat, with no API key.
-- **charts**: a sparkline of sightings per year, and bars for the top few of anything.
-- **filter**: chips and a search box that narrow the list in the browser, every sighting still in
-  the page.
-- **transitions**: a cross-fade between pages, once there's more than one.
+- **favicon**: "a logo in the header and on the browser tab". Every site gets this one, so ask
+  instead what it should be: an animal, a shape, a letter?
+- **swiper**: "a row of photos you swipe through on a phone, side by side on a laptop".
+- **lightbox**: "click a photo to see it big".
+- **reveal**: "sections fade in as you scroll down to them".
+- **threejs**: "a 3D scene, such as a spinning globe". What the scene is, they decide; you build
+  it. The block is only the plumbing.
+- **weather**: "the weather on the day each animal was seen", from the weather already stored.
+- **map**: "a map of where each animal was seen, the dots grouped by area or a glow where there
+  are most". Leaflet, with no API key.
+- **charts**: "a small chart of sightings per year, and bars for the most-seen animals".
+- **filter**: "buttons to narrow the list by animal or country, and a search box". It works in
+  the browser, so every sighting is still in the page.
+- **transitions**: "a smooth fade from one page to the next", once there's more than one.
 
 Copy the CSS and JS files into `web/assets/`, and the templ from the `.md` into `web/views/`, then
 make them look like the rest of their site.
@@ -143,11 +189,11 @@ their approach, under `starter/cmd/themes/internal/`:
 
 ## Keep it building
 
-- Change files under `web/` only: views, assets, `web.go`, and new files in `web/handlers/`.
-- Leave `web/handlers/home.go` and `pages.Home`'s signature as they are. The home page at `/` keeps rendering every sighting and shows each one's observers
-  (`s.RecordedBy`, already tidied by the service), whether on a card, in a table row or in a map
-  popup. The Profiling block measures exactly that. Other pages are free to
-  show fewer.
+- Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`.
+- `web/handlers/home.go` is theirs to change, including the `ListFilter` that picks which sightings
+  the home page shows. Keep the home page at `/` listing sightings through `sightings.List` and
+  showing each one's observers (`s.RecordedBy`, already tidied by the service), whether on a card,
+  in a table row or in a map popup. The Profiling block measures exactly that.
 - Components take domain types directly, or props built from them once, the way the themes'
   `NewProps` does. Helpers are plain Go functions in a file beside the `.templ` that uses them.
 - Don't comment templ components. A Go helper gets one short line at most, saying what it does.
@@ -165,7 +211,8 @@ their approach, under `starter/cmd/themes/internal/`:
 - When a round of edits is done, run `make templ` and then `go build ./...`, and fix what fails
   before going on. The generated `_templ.go` files are what gets deployed.
 - Modules are vendored. If you `go get` one, run `make vendor` afterwards, or the build refuses it.
-- Don't commit or push. They push to their fork when they're happy.
+- Don't run git. The session commits and pushes to their fork by itself after each of your turns,
+  so don't mention it unless they ask.
 
 ## See the site
 
@@ -183,6 +230,14 @@ and don't stop theirs.
 ## Hand back
 
 Check the work against the checklist the design search printed: contrast, focus states, alt text, a
-375px-wide screen, and every nav link going somewhere. Then say what changed, what's on the page
-and where each templ feature now lives (components and their props, loops, conditionals and the
-layout's children slot), and ask what they'd like to change next.
+375px-wide screen, and every nav link going somewhere. Report what you find in plain words, such
+as "the grey text on white is hard to read", and fix it.
+
+Then say what changed and what's on the page. They watched the app being built rather than
+writing it, so this is where they learn templ: point at one or two of the files they now own and
+explain it in Go terms. A component is a Go function returning a `templ.Component`, its props are
+the parameters, `for` and `if` are Go's own, and the layout's `{ children... }` is where each page
+slots in. Keep it to a few lines and offer more if they want it.
+
+Ask what they'd like to change next. Their work is already on their fork, which is what the
+workshop looks at afterwards.

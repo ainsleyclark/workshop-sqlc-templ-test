@@ -70,8 +70,8 @@ where GBIF's Occurrence becomes our Sighting.
   `SightingStore`, `SpeciesStore`. The package name is doing no work.
 - `store.Sighting` and `domain.Sighting` are the same word for a map and a record.
 - The domain has no behaviour. Two structs and two interfaces, and every rule still lives
-  somewhere else: the display name in `handlers`, the transform in `services`, and the rule that
-  a sighting needs coordinates nowhere at all.
+  somewhere else: the display name in `handlers`, the transform in `services`, and no rule at all
+  against a sighting from the future.
 - `domain.Sighting` still carries `json` tags. Who is it dressed for, if it imports nothing?
 - Adding weather still means opening four folders, they're just better arranged.
 - `services` collects anything that isn't a struct. It's the new `main.go`.
@@ -92,7 +92,7 @@ homeless file will too.
 
 ## Questions
 
-- Which package owns the rule that a sighting needs coordinates? Where would you put it now?
+- Which package owns the rule that a sighting can't happen in the future? Where would you put it now?
 - `handlers` looks up a species for every sighting. Whose job is that join?
 - The transforms sit in `services`. Do they belong to GBIF, or to the domain?
 - If `domain` imports nothing, why does it know the word `json`?

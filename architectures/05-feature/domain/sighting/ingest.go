@@ -24,8 +24,8 @@ func (s Service) Ingest(ctx context.Context) error {
 			continue
 		}
 
-		// Save rather than store.Save, so a sighting without
-		// coordinates cannot reach the store.
+		// Save rather than store.Save, so a sighting dated in the
+		// future cannot reach the store.
 		if err = s.Save(transformOccurrence(o, sp)); err != nil {
 			if errors.Is(err, ErrInvalid) || errors.Is(err, ErrAlreadyExists) {
 				slog.Warn("skipping occurrence", "key", o.Key, "err", err)

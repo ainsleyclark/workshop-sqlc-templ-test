@@ -45,7 +45,7 @@ file that knows a `*sighting.Service` satisfies it.
 │   │   ├── model.go                        Sighting — our shape, carrying its species
 │   │   ├── sighting.go                     the ports, the Service, the errors
 │   │   ├── ingest.go                       GBIF → store, and the two transforms
-│   │   ├── validate.go                     a sighting needs coordinates and a species
+│   │   ├── validate.go                     a sighting needs a species, and can't be in the future
 │   │   └── stores/sightingmem/             implements sighting.Store
 │   └── species/
 │       ├── model.go                        Species, and the display-name rule

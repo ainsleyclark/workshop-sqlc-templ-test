@@ -28,6 +28,7 @@ func Home(logger *slog.Logger, sightings SightingsLister) http.HandlerFunc {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if err = pages.Home(items).Render(ctx, w); err != nil {
 			logger.ErrorContext(ctx, "handlers: rendering sightings: "+err.Error())
+			renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to render page.")
 		}
 	}
 }

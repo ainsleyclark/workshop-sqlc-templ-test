@@ -2,6 +2,7 @@ package sighting
 
 import (
 	"errors"
+	"time"
 
 	"04-hexagonal/clients/gbif"
 	"04-hexagonal/domain/species"
@@ -51,7 +52,7 @@ func (s Service) List() []Sighting {
 
 // Save validates the sighting before handing it to the store.
 func (s Service) Save(si Sighting) error {
-	if err := si.Validate(); err != nil {
+	if err := si.Validate(time.Now()); err != nil {
 		return err
 	}
 	return s.store.Save(si)

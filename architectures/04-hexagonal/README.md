@@ -28,7 +28,7 @@ stores, and they cannot both be `package mem`.
 │   │   ├── model.go         Sighting — our shape
 │   │   ├── sighting.go      the Store port, the Service, the errors
 │   │   ├── ingest.go        GBIF → store (the species lookup)
-│   │   └── validate.go      a sighting needs coordinates
+│   │   └── validate.go      a sighting can't happen in the future
 │   └── species/
 │       ├── model.go         Species — our shape, and the display-name rule
 │       └── species.go       the Store port, the Service
@@ -134,9 +134,10 @@ described in [the tour's README](../README.md#parse-dont-validate).
 
 Two fields here are asking for it. `model.go` carries
 `EventDate string // "2016-01-11", and not a time.Time`, a field advertising that it holds three
-formats and trusting you to cope, and `Latitude`/`Longitude` are bare floats whose range is checked
-somewhere else entirely. A `Coordinates` type with a `ParseCoordinates` function would move that
-rule to the one place a coordinate can come into existence. The app does exactly this, and the
+formats and trusting you to cope. `validate.go` copes by slicing the day off the front before it
+can say whether a sighting is in the future. `Latitude`/`Longitude` are bare floats whose range is
+checked somewhere else entirely. A `Coordinates` type with a `ParseCoordinates` function would move
+that rule to the one place a coordinate can come into existence. The app does exactly this, and the
 GBIF client there already parses those three date formats at the boundary, so nothing inland has to.
 
 ### One `main.go`, for now

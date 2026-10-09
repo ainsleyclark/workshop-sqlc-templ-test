@@ -30,10 +30,10 @@ coverage.*
 *.db-shm
 !/workshop.db
 
-# Build output, except the install script
+# Build output
 bin/*
-!bin/setup.sh
 
 # Vendored modules are committed whole: the patterns above are about your files, and
 # would drop ones the build needs (golang.org/x/text has a coverage.go).
 !/vendor/**
+!/tools/gopls/vendor/**

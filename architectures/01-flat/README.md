@@ -57,7 +57,7 @@ make decisions you may regret later down the line.
 ## Questions
 
 - If we added weather to each sighting, where would it go?
-- How would you enforce the rule that a sighting needs coordinates?
+- How would you enforce the rule that a sighting can't happen in the future?
 - How would you test ingest without calling GBIF?
 - If GBIF renamed a field, how far does the change reach?
 

@@ -10,8 +10,8 @@ full-stack applications that age well.
 
 You'll start from a working application built on a real public API, and walk through five different
 architectures for the same feature to see what domain-driven design actually buys you. Then we'll
-walk through how the application was extended with a new domain: a type-safe data layer with sqlc
-and SQLite, the ingestion that feeds it, and a front-end written with templ.
+walk through how it's built: a type-safe data layer with sqlc and SQLite, and a front-end written
+with templ.
 
 The build is a guided walkthrough of real, finished code, so you spend the time on the decisions
 rather than the typing. The hands-on part comes after it: you theme your own copy of the site,
@@ -21,7 +21,6 @@ own and a clear model of how to structure Go code around a domain rather than a 
 ## What you'll learn
 
 - How to structure a Go codebase around its domain so it ages well.
-- How an existing application is extended with a brand-new domain, end to end.
 - How to generate a type-safe data layer with sqlc.
 - How to serve a user interface directly from Go with templ.
 
@@ -37,31 +36,16 @@ same features and work out where it's suited best.
 - What pushes you from one architecture to the next.
 - A brief look at the finished application.
 
-### 2. Extending the Domain
+### 2. A Type-Safe Data Layer with sqlc
 
-How a brand-new domain is added to an existing application, sourced from a second, independent API.
-
-- Where does a new concept live?
-- Modelling entities and operations.
-- Translating API responses into domain types.
-
-### 3. A Type-Safe Data Layer with sqlc
-
-Once you're fetching new data, it's time to store it, with sqlc and SQLite.
+How the application stores what it fetches, with sqlc and SQLite.
 
 - Schema design, driven by the domain.
 - Writing & generating queries.
 - Mapping generated types to domain types.
 - Query tests against a real database.
 
-### 4. Ingestion
-
-Wiring the new domain into the application's existing ingestion pipeline.
-
-- Enriching every record as it's ingested.
-- Persisting and associating the result.
-
-### 5. Building the Front-End with templ
+### 3. Building the Front-End with templ
 
 Exposing the application through handlers that call templ components and layouts.
 
@@ -69,7 +53,7 @@ Exposing the application through handlers that call templ components and layouts
 - Handlers, routing & error mapping.
 - A homepage, themed your way: hands-on, with Claude Code.
 
-### 6. Profiling
+### 4. Profiling
 
 Hands-on: where the application spends its time, and how you can make it faster.
 

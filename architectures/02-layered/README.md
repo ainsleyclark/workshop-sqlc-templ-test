@@ -90,7 +90,7 @@ a strange thing to demand of the package that is supposed to hold your domain.
 ## Questions
 
 - If we added weather to each sighting, how many packages would you open?
-- Which package owns the rule that a sighting needs coordinates?
+- Which package owns the rule that a sighting can't happen in the future?
 - `store` imports `models`. Could `models` ever import `store`?
 - Is `models` a domain, or a folder of structs GBIF's JSON happens to fit?
 - `gbif` decodes into `models.Occurrence`. Whose type is that — ours, or theirs?

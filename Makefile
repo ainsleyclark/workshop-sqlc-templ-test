@@ -3,12 +3,19 @@
 UPSTREAM := ainsleyclark/workshop-sqlc-templ-test
 
 setup: # Install the toolchain and point upstream at the workshop repository; run once after cloning your fork
-	sh bin/setup.sh $(UPSTREAM)
+	sh tools/setup/setup.sh $(UPSTREAM)
 .PHONY: setup
 
 update: # Pull the instructor's latest changes from the workshop repository into your fork
 	git pull --rebase upstream main
 .PHONY: update
+
+push: # Commit everything and push it to your fork.
+	@[ "$$(git rev-parse --show-toplevel 2>/dev/null)" = "$$(pwd -P)" ] || { echo "make push runs from the root of your fork"; exit 1; }
+	git add .
+	-git commit -q -m "feat: Attendee Push"
+	git push -q
+.PHONY: push
 
 run: # Run the program
 	go run .
@@ -42,6 +49,10 @@ mock: # Serve the mock GBIF and Open-Meteo APIs on :8082.
 mock-scrape: # Refresh the mock's GBIF data from the live API.
 	go run ./cmd/mockapi scrape
 .PHONY: mock-scrape
+
+themes: # Serve the themed examples on :8083
+	go run ./cmd/themes
+.PHONY: themes
 
 format: # Run gofmt and templ fmt
 	go fmt ./...
@@ -91,9 +102,10 @@ sqlc: # Regenerate sqlc output.
 	go build ./...
 .PHONY: sqlc
 
-vendor: # Re-vendor after go get.
+vendor: # Re-vendor after go get, here and in tools/gopls.
 	go mod tidy
 	go mod vendor
+	cd tools/gopls && go mod tidy && go mod vendor
 .PHONY: vendor
 
 kill-ports: # Kill anything listening on the ports this app uses.

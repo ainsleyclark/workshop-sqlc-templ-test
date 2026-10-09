@@ -10,7 +10,6 @@
       "Edit(/web/**)"
     ],
     "deny": [
-      "Edit(/web/handlers/home*.go)",
       "Edit(/internal/domain/sighting/sighting.go)"
     ]
   }
