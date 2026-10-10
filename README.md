@@ -69,7 +69,7 @@ make help       # everything else
 ```
 
 **On Windows**, run these from PowerShell or Git Bash. Every recipe in the `Makefile` is a plain
-`go` or `git` command, so if `make` won't cooperate, open the `Makefile` and run the lines under
+`go` or `git` command, so if `make` won't cooperate, open `tools/setup.mk` and run the lines under
 `tools:` and `setup:` yourself. If `vendor/` ever fails you, `make tools-online` installs the
 same tools at the same versions from the internet. Only `make help` and `make kill-ports` need a
 Unix shell.

@@ -2,37 +2,7 @@
 # in the maintainer repository rewrites this line for each event.
 UPSTREAM := ainsleyclark/workshop-sqlc-templ-test
 
-tools: # Build the Go tools from vendor/ (nothing is downloaded) and the app, as workshop on your PATH
-	go install github.com/a-h/templ/cmd/templ
-	go -C tools/gopls install golang.org/x/tools/gopls
-	go tool sqlc version
-	go install github.com/romshark/templier
-	go install .
-	go build ./...
-.PHONY: tools
-
-tools-online: # The same tools at the same versions from the internet
-	go install github.com/a-h/templ/cmd/templ@v0.3.1020
-	go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
-	go install github.com/romshark/templier@v0.13.0
-	go install golang.org/x/tools/gopls@v0.23.0
-.PHONY: tools-online
-
-setup: export GOTOOLCHAIN = local
-setup: tools # Build the tools; run once after cloning your fork
-	@echo You are ready. Fill the database with go run . db seed, then make web serves the site on :8080.
-.PHONY: setup
-
-update: # Pull the instructor's latest changes from the workshop repository into your fork
-	git pull --rebase https://github.com/$(UPSTREAM).git main
-.PHONY: update
-
-push: # Commit everything and push it to your fork.
-	@$(if $(wildcard .git),,$(error make push runs from the root of your fork))
-	git add .
-	-git commit -q -m "feat: Attendee Push"
-	git push -q
-.PHONY: push
+include tools/setup.mk
 
 run: # Run the program
 	go run .
@@ -96,6 +66,17 @@ load-pprof: # Load test the home page for 20 seconds while make web runs, saving
 profile-cpu:
 	go tool pprof -proto -output cpu.pprof "http://localhost:6060/debug/pprof/profile?seconds=10"
 .PHONY: profile-cpu
+
+update: # Pull the instructor's latest changes from the workshop repository into your fork
+	git pull --rebase https://github.com/$(UPSTREAM).git main
+.PHONY: update
+
+push: # Commit everything and push it to your fork.
+	@$(if $(wildcard .git),,$(error make push runs from the root of your fork))
+	git add .
+	-git commit -q -m "feat: Attendee Push"
+	git push -q
+.PHONY: push
 
 clean:
 	go fmt ./...
