@@ -66,7 +66,7 @@ Hands-on: where the application spends its time, and how you can make it faster.
 - Several months writing Go.
 - Familiarity with SQL and relational databases.
 - Go 1.27.1 or newer on the device you bring, with `~/go/bin` on your PATH.
-- macOS or Linux, or Windows with WSL2. You'll need `make` (on macOS: `xcode-select --install`).
+- macOS, Linux or Windows. You'll need `make` (macOS: `xcode-select --install`; Windows: `winget install ezwinports.make`).
 - A GitHub account. On the day you'll fork the workshop repository and theme your site in your fork.
 - Basic knowledge of git.
 - Basic HTML and CSS. No JavaScript framework experience needed.

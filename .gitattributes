@@ -1,0 +1,2 @@
+# Git for Windows checks text out as CRLF by default; Go, templ and sqlc want LF.
+* text=auto eol=lf

@@ -80,6 +80,7 @@ require (
 	github.com/pingcap/failpoint v0.0.0-20240528011301-b51a646c7c86 // indirect
 	github.com/pingcap/log v1.1.0 // indirect
 	github.com/pingcap/tidb/pkg/parser v0.0.0-20260418072757-ce92298d1124 // indirect
+	github.com/rakyll/hey v0.1.4 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/riza-io/grpc-go v0.2.0 // indirect
@@ -120,6 +121,7 @@ require (
 
 tool (
 	github.com/a-h/templ/cmd/templ
+	github.com/rakyll/hey
 	github.com/romshark/templier
 	github.com/sqlc-dev/sqlc/cmd/sqlc
 )
