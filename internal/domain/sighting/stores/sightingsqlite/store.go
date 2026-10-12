@@ -25,6 +25,8 @@ func New(queries db.Querier) *Store {
 	return &Store{queries: queries}
 }
 
+// Find returns the sighting for id, or sighting.ErrNotFound if it
+// doesn't exist.
 func (s Store) Find(ctx context.Context, id uuid.UUID) (sighting.Sighting, error) {
 	row, err := s.queries.SightingFind(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -36,6 +38,8 @@ func (s Store) Find(ctx context.Context, id uuid.UUID) (sighting.Sighting, error
 	return transform(db.SightingListRow(row))
 }
 
+// FindByGbifKey returns the sighting for gbifKey, or
+// sighting.ErrNotFound if it doesn't exist.
 func (s Store) FindByGbifKey(ctx context.Context, gbifKey int) (sighting.Sighting, error) {
 	row, err := s.queries.SightingFindByGbifKey(ctx, int64(gbifKey))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -47,6 +51,7 @@ func (s Store) FindByGbifKey(ctx context.Context, gbifKey int) (sighting.Sightin
 	return transform(db.SightingListRow(row))
 }
 
+// List returns every sighting matching filter.
 func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting.Sighting, error) {
 	// The keys go in as one JSON array rather than through sqlc.slice, which
 	// expands at runtime and throws SQLite's numbered placeholders out for
@@ -87,6 +92,8 @@ func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting
 	return result, nil
 }
 
+// Create persists a new sighting under id, or returns
+// sighting.ErrAlreadyExists if one is already there.
 func (s Store) Create(ctx context.Context, id uuid.UUID, in sighting.CreateParams) (sighting.Sighting, error) {
 	params, err := toSightingCreateParams(id, in)
 	if err != nil {

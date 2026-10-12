@@ -156,6 +156,16 @@ func TestService_Create(t *testing.T) {
 		assert.Equal(t, got.CreatedAt, got.UpdatedAt)
 	})
 
+	t.Run("Assigns an identity", func(t *testing.T) {
+		ctx, svc := setup(t, false)
+
+		first := create(t, ctx, svc, newCreateParams(5219404))
+		second := create(t, ctx, svc, newCreateParams(5219448))
+
+		assert.NotEqual(t, uuid.Nil(), first.ID)
+		assert.NotEqual(t, first.ID, second.ID)
+	})
+
 	t.Run("Is retrievable once created", func(t *testing.T) {
 		ctx, svc := setup(t, false)
 		created := create(t, ctx, svc, newCreateParams(2435099))

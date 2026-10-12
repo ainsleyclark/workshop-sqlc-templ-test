@@ -31,3 +31,22 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestCode_String(t *testing.T) {
+	t.Parallel()
+
+	tt := map[string]struct {
+		input Code
+		want  string
+	}{
+		"Empty": {input: "", want: ""},
+		"Kenya": {input: Kenya, want: "KE"},
+	}
+
+	for name, test := range tt {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, test.want, test.input.String())
+		})
+	}
+}

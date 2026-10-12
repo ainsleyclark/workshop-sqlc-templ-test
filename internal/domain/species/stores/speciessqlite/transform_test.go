@@ -8,7 +8,6 @@ import (
 	"workshop/internal/infra/db/sqlc"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTransform(t *testing.T) {
@@ -71,6 +70,7 @@ func TestToSpeciesCreateParams(t *testing.T) {
 	t.Run("Maps all fields", func(t *testing.T) {
 		t.Parallel()
 
+		id := uuid.New()
 		input := species.CreateParams{
 			GBIFKey:        5219404,
 			Kingdom:        "Animalia",
@@ -86,6 +86,7 @@ func TestToSpeciesCreateParams(t *testing.T) {
 			VernacularName: "lion",
 		}
 		want := db.SpeciesCreateParams{
+			ID:             id,
 			GbifKey:        5219404,
 			Kingdom:        "Animalia",
 			Phylum:         "Chordata",
@@ -100,26 +101,12 @@ func TestToSpeciesCreateParams(t *testing.T) {
 			VernacularName: "lion",
 		}
 
-		got := toSpeciesCreateParams(input)
-		require.NotEqual(t, uuid.Nil(), got.ID)
-		// The ID is random, so compare everything else.
-		got.ID = uuid.Nil()
-		assert.Equal(t, want, got)
+		assert.Equal(t, want, toSpeciesCreateParams(id, input))
 	})
 
-	t.Run("Preserves zero values but still assigns an ID", func(t *testing.T) {
+	t.Run("Preserves zero values", func(t *testing.T) {
 		t.Parallel()
 
-		got := toSpeciesCreateParams(species.CreateParams{})
-		require.NotEqual(t, uuid.Nil(), got.ID)
-		got.ID = uuid.Nil()
-		assert.Equal(t, db.SpeciesCreateParams{}, got)
-	})
-
-	t.Run("Assigns a new ID on each call", func(t *testing.T) {
-		t.Parallel()
-
-		in := species.CreateParams{GBIFKey: 5219404}
-		assert.NotEqual(t, toSpeciesCreateParams(in).ID, toSpeciesCreateParams(in).ID)
+		assert.Equal(t, db.SpeciesCreateParams{}, toSpeciesCreateParams(uuid.Nil(), species.CreateParams{}))
 	})
 }

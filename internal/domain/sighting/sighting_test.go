@@ -3,15 +3,11 @@ package sighting_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 	"uuid"
-	"workshop/internal/clients/openmeteo"
 	"workshop/internal/common/logs"
 	"workshop/internal/domain/sighting"
 	"workshop/internal/domain/sighting/country"
@@ -40,7 +36,12 @@ var testWeatherID = uuid.New()
 // lionKey is the GBIF taxon key the lion fixtures are recorded against.
 const lionKey = 5219404
 
-func setup(t *testing.T, fail bool) (context.Context, *sighting.Service, *speciessqlite.Store) {
+func setup(
+	t *testing.T,
+	fail bool,
+	gbifClient sighting.SpeciesSearcher,
+	openMeteoClient sighting.WeatherReader,
+) (context.Context, *sighting.Service, *species.Service) {
 	t.Helper()
 
 	ctx, conn, teardown := dbtest.Setup(t)
@@ -50,11 +51,6 @@ func setup(t *testing.T, fail bool) (context.Context, *sighting.Service, *specie
 	if fail {
 		q = dbtest.FailingQuerier(errInternal)
 	}
-
-	// Ingest records the weather for every sighting it creates, so it
-	// always needs somewhere to fetch it from.
-	weatherSrv := httptest.NewServer(http.HandlerFunc(openMeteoStub))
-	t.Cleanup(weatherSrv.Close)
 
 	// Weather is mandatory on a sighting, so every database needs the row
 	// that newCreateParams points at. Seeded through the real queries so
@@ -70,18 +66,17 @@ func setup(t *testing.T, fail bool) (context.Context, *sighting.Service, *specie
 	})
 	require.NoError(t, err)
 
-	speciesStore := speciessqlite.New(q)
-
 	logger := logs.NewProduction(io.Discard, slog.LevelError)
+	speciesSvc := species.NewService(logger, speciessqlite.New(q))
 
 	return ctx, sighting.NewService(
 		logger,
 		sightingsqlite.New(q),
-		speciesStore,
+		speciesSvc,
 		weather.NewService(logger, weathersqlite.New(q)),
-		nil,
-		openmeteo.New(weatherSrv.URL),
-	), speciesStore
+		gbifClient,
+		openMeteoClient,
+	), speciesSvc
 }
 
 func lionParams() species.CreateParams {
@@ -103,10 +98,10 @@ func lionParams() species.CreateParams {
 
 // seedLion saves the lion locally, so callers reuse it instead of fetching
 // the taxonomy from GBIF.
-func seedLion(t *testing.T, ctx context.Context, store *speciessqlite.Store) species.Species {
+func seedLion(t *testing.T, ctx context.Context, speciesSvc *species.Service) species.Species {
 	t.Helper()
 
-	lion, err := store.Create(ctx, lionParams())
+	lion, err := speciesSvc.Create(ctx, lionParams())
 	require.NoError(t, err)
 
 	return lion
@@ -159,8 +154,8 @@ func create(t *testing.T, ctx context.Context, svc *sighting.Service, in sightin
 
 func TestService_Find(t *testing.T) {
 	t.Run("Found", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 		created := create(t, ctx, svc, newCreateParams(lion.ID, 123))
 
 		got, err := svc.Find(ctx, created.ID)
@@ -170,8 +165,8 @@ func TestService_Find(t *testing.T) {
 	})
 
 	t.Run("Joins the species", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 		created := create(t, ctx, svc, newCreateParams(lion.ID, 123))
 
 		got, err := svc.Find(ctx, created.ID)
@@ -180,14 +175,14 @@ func TestService_Find(t *testing.T) {
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		ctx, svc, _ := setup(t, false)
+		ctx, svc, _ := setup(t, false, nil, nil)
 
 		_, err := svc.Find(ctx, uuid.New())
 		assert.ErrorIs(t, err, sighting.ErrNotFound)
 	})
 
 	t.Run("Store error", func(t *testing.T) {
-		ctx, svc, _ := setup(t, true)
+		ctx, svc, _ := setup(t, true, nil, nil)
 
 		_, err := svc.Find(ctx, uuid.New())
 		assert.ErrorIs(t, err, errInternal)
@@ -196,7 +191,7 @@ func TestService_Find(t *testing.T) {
 
 func TestService_List(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
-		ctx, svc, _ := setup(t, false)
+		ctx, svc, _ := setup(t, false, nil, nil)
 
 		got, err := svc.List(ctx, sighting.ListFilter{})
 		require.NoError(t, err)
@@ -204,8 +199,8 @@ func TestService_List(t *testing.T) {
 	})
 
 	t.Run("Lists newest first", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		older := newCreateParams(lion.ID, 123)
 		newer := newCreateParams(lion.ID, 124)
@@ -222,8 +217,8 @@ func TestService_List(t *testing.T) {
 	})
 
 	t.Run("Passes the filter through", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		london := newCreateParams(lion.ID, 123)
 		nairobi := newCreateParams(lion.ID, 124)
@@ -240,8 +235,8 @@ func TestService_List(t *testing.T) {
 	})
 
 	t.Run("Filters by animal", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 		create(t, ctx, svc, newCreateParams(lion.ID, 123))
 
 		got, err := svc.List(ctx, sighting.ListFilter{Animals: []species.Animal{species.AnimalLion}})
@@ -254,8 +249,8 @@ func TestService_List(t *testing.T) {
 	})
 
 	t.Run("Tidies the observers", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		params := newCreateParams(lion.ID, 123)
 		params.RecordedBy = "Ada [1]|Grace"
@@ -268,7 +263,7 @@ func TestService_List(t *testing.T) {
 	})
 
 	t.Run("Store error", func(t *testing.T) {
-		ctx, svc, _ := setup(t, true)
+		ctx, svc, _ := setup(t, true, nil, nil)
 
 		_, err := svc.List(ctx, sighting.ListFilter{})
 		assert.ErrorIs(t, err, errInternal)
@@ -277,8 +272,8 @@ func TestService_List(t *testing.T) {
 
 func TestService_Create(t *testing.T) {
 	t.Run("Creates sighting", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 		in := newCreateParams(lion.ID, 200)
 
 		got, err := svc.Create(ctx, in)
@@ -289,8 +284,8 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Assigns an identity", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		first := create(t, ctx, svc, newCreateParams(lion.ID, 201))
 		second := create(t, ctx, svc, newCreateParams(lion.ID, 202))
@@ -300,8 +295,8 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Is retrievable once created", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 		created := create(t, ctx, svc, newCreateParams(lion.ID, 203))
 
 		got, err := svc.Find(ctx, created.ID)
@@ -310,8 +305,8 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Already exists", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		in := newCreateParams(lion.ID, 204)
 		create(t, ctx, svc, in)
@@ -321,7 +316,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Missing species", func(t *testing.T) {
-		ctx, svc, _ := setup(t, false)
+		ctx, svc, _ := setup(t, false, nil, nil)
 
 		in := newCreateParams(uuid.Nil(), 205)
 
@@ -330,8 +325,8 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Future sighting", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		in := newCreateParams(lion.ID, 206)
 		in.HappenedAt = time.Now().AddDate(0, 0, 1)
@@ -341,8 +336,8 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Invalid params are not persisted", func(t *testing.T) {
-		ctx, svc, store := setup(t, false)
-		lion := seedLion(t, ctx, store)
+		ctx, svc, speciesSvc := setup(t, false, nil, nil)
+		lion := seedLion(t, ctx, speciesSvc)
 
 		in := newCreateParams(lion.ID, 207)
 		in.Location.Latitude = 100
@@ -356,35 +351,9 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Store error", func(t *testing.T) {
-		ctx, svc, _ := setup(t, true)
+		ctx, svc, _ := setup(t, true, nil, nil)
 
 		_, err := svc.Create(ctx, newCreateParams(uuid.New(), 208))
 		assert.ErrorIs(t, err, errInternal)
 	})
-}
-
-// openMeteoStub serves one hour of settled weather, so ingest has
-// something to record without reaching the real archive.
-func openMeteoStub(w http.ResponseWriter, r *http.Request) {
-	hour := r.URL.Query().Get("start_hour")
-
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = fmt.Fprintf(w, `{
-		"latitude": -3.35,
-		"longitude": 40.02,
-		"hourly": {
-			"time": [%q],
-			"temperature_2m": [26.3],
-			"apparent_temperature": [28.1],
-			"relative_humidity_2m": [74],
-			"precipitation": [0.0],
-			"rain": [0.0],
-			"snowfall": [0.0],
-			"cloud_cover": [22],
-			"weather_code": [1],
-			"wind_speed_10m": [14.2],
-			"wind_gusts_10m": [27.4],
-			"wind_direction_10m": [118]
-		}
-	}`, hour)
 }

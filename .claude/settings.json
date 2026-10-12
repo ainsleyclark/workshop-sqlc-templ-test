@@ -6,6 +6,11 @@
       "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py *)",
       "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py *)",
       "Bash(go build ./...)",
+      "Bash(go run . stats)",
+      "Bash(go run . animals)",
+      "Bash(go run . db seed)",
+      "Bash(go run . db migrate status)",
+      "Bash(go run . db migrate up)",
       "Bash(curl -s http://localhost:*)",
       "Edit(/web/**)"
     ],

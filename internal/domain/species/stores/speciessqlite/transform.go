@@ -26,9 +26,9 @@ func transform(r db.Species) species.Species {
 	}
 }
 
-func toSpeciesCreateParams(in species.CreateParams) db.SpeciesCreateParams {
+func toSpeciesCreateParams(id uuid.UUID, in species.CreateParams) db.SpeciesCreateParams {
 	return db.SpeciesCreateParams{
-		ID:             uuid.New(),
+		ID:             id,
 		GbifKey:        int64(in.GBIFKey),
 		Kingdom:        in.Kingdom,
 		Phylum:         in.Phylum,

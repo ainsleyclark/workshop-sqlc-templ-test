@@ -10,10 +10,10 @@ import (
 // Store defines the operations used to persist and query
 // species data.
 type Store interface {
-	Find(context.Context, uuid.UUID) (Species, error)
-	FindByGbifKey(context.Context, int) (Species, error)
-	List(context.Context) ([]Species, error)
-	Create(context.Context, CreateParams) (Species, error)
+	Find(ctx context.Context, id uuid.UUID) (Species, error)
+	FindByGbifKey(ctx context.Context, gbifKey int) (Species, error)
+	List(ctx context.Context) ([]Species, error)
+	Create(ctx context.Context, id uuid.UUID, in CreateParams) (Species, error)
 }
 
 // Service is the entry point for working with species data.
@@ -24,7 +24,7 @@ type Service struct {
 	store  Store
 }
 
-// NewService returns a Service backed by the given repository.
+// NewService returns a Service backed by the given store.
 func NewService(
 	logger *slog.Logger,
 	store Store,
@@ -43,15 +43,11 @@ var (
 	// ErrAlreadyExists represents an error where a species with
 	// the same GBIF key is already in the data store.
 	ErrAlreadyExists = errors.New("species already exists")
-
-	// ErrInvalid represents an error where a species breaks
-	// one of the rules in Validate.
-	ErrInvalid = errors.New("invalid species")
 )
 
 // Find returns the species with the given ID, or ErrNotFound.
-func (s Service) Find(ctx context.Context, u uuid.UUID) (Species, error) {
-	return s.store.Find(ctx, u)
+func (s Service) Find(ctx context.Context, id uuid.UUID) (Species, error) {
+	return s.store.Find(ctx, id)
 }
 
 // FindByGbifKey returns the species with the given GBIF key, or ErrNotFound.
@@ -64,7 +60,8 @@ func (s Service) List(ctx context.Context) ([]Species, error) {
 	return s.store.List(ctx)
 }
 
-// Create adds a new species to the data store.
+// Create assigns the species its identity before handing it to the
+// store.
 func (s Service) Create(ctx context.Context, params CreateParams) (Species, error) {
-	return s.store.Create(ctx, params)
+	return s.store.Create(ctx, uuid.New(), params)
 }

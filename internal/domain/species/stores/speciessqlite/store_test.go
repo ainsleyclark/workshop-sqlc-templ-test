@@ -22,14 +22,13 @@ func TestSpecies_Store(t *testing.T) {
 	errInternal := errors.New("internal error")
 	failingStore := New(dbtest.FailingQuerier(errInternal))
 
-	setup := func(t *testing.T, in species.CreateParams) species.Species {
+	setup := func(t *testing.T, id uuid.UUID, in species.CreateParams) species.Species {
 		t.Helper()
 
-		got, err := store.Create(ctx, in)
+		got, err := store.Create(ctx, id, in)
 		require.NoError(t, err)
-		assert.NotEqual(t, uuid.Nil(), got.ID)
 		assert.WithinDuration(t, time.Now(), got.CreatedAt, 5*time.Second)
-		assert.Equal(t, wantCreated(got.ID, in, got.CreatedAt), got)
+		assert.Equal(t, wantCreated(id, in, got.CreatedAt), got)
 
 		return got
 	}
@@ -38,7 +37,7 @@ func TestSpecies_Store(t *testing.T) {
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("OK", func(t *testing.T) {
-			fixture = setup(t, newCreateParams(5219404))
+			fixture = setup(t, uuid.New(), newCreateParams(5219404))
 		})
 
 		t.Run("Persists a genus without species or vernacular name", func(t *testing.T) {
@@ -51,20 +50,16 @@ func TestSpecies_Store(t *testing.T) {
 			in.CanonicalName = "Panthera"
 			in.VernacularName = ""
 
-			genusFixture = setup(t, in)
-		})
-
-		t.Run("Assigns a new ID to each species", func(t *testing.T) {
-			assert.NotEqual(t, fixture.ID, genusFixture.ID)
+			genusFixture = setup(t, uuid.New(), in)
 		})
 
 		t.Run("Rejects duplicate GBIF key", func(t *testing.T) {
-			_, err := store.Create(ctx, newCreateParams(fixture.GBIFKey))
+			_, err := store.Create(ctx, uuid.New(), newCreateParams(fixture.GBIFKey))
 			assert.ErrorIs(t, err, species.ErrAlreadyExists)
 		})
 
 		t.Run("Internal error", func(t *testing.T) {
-			got, err := failingStore.Create(ctx, newCreateParams(5219405))
+			got, err := failingStore.Create(ctx, uuid.New(), newCreateParams(5219405))
 			assert.ErrorIs(t, err, errInternal)
 			assert.Zero(t, got)
 		})

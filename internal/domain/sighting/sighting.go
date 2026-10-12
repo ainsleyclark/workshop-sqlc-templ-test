@@ -23,31 +23,34 @@ type Store interface {
 	Create(ctx context.Context, id uuid.UUID, in CreateParams) (Sighting, error)
 }
 
+// Service is the entry point for working with sighting data.
+// Handlers and other domains should use this type instead
+// of interacting with the store directly.
 type Service struct {
 	logger    *slog.Logger
-	repo      Store
+	store     Store
 	species   SpeciesReadWriter
 	weather   WeatherWriter
-	gbif      *gbif.Client
-	openmeteo *openmeteo.Client
+	gbif      SpeciesSearcher
+	openmeteo WeatherReader
 }
 
-// NewService returns a Service backed by the given repository.
+// NewService returns a Service backed by the given store.
 func NewService(
 	logger *slog.Logger,
-	repo Store,
+	store Store,
 	speciesSvc SpeciesReadWriter,
 	weatherSvc WeatherWriter,
-	gbifClient *gbif.Client,
-	openmeteo *openmeteo.Client,
+	gbifClient SpeciesSearcher,
+	openMeteoClient WeatherReader,
 ) *Service {
 	return &Service{
 		logger:    logger,
-		repo:      repo,
+		store:     store,
 		species:   speciesSvc,
 		weather:   weatherSvc,
 		gbif:      gbifClient,
-		openmeteo: openmeteo,
+		openmeteo: openMeteoClient,
 	}
 }
 
@@ -61,6 +64,19 @@ type SpeciesReadWriter interface {
 // WeatherWriter is required by ingest to create weather records.
 type WeatherWriter interface {
 	Create(ctx context.Context, params weather.CreateParams) (weather.Weather, error)
+}
+
+// SpeciesSearcher is required by ingest to search GBIF for
+// occurrences and look up the species each one belongs to.
+type SpeciesSearcher interface {
+	Occurrences(ctx context.Context, args gbif.OccurrencesSearchArgs) (gbif.PaginatedResponse[gbif.Occurrence], error)
+	Species(ctx context.Context, key int) (gbif.Species, error)
+}
+
+// WeatherReader is required by ingest to fetch the weather where
+// and when an occurrence happened.
+type WeatherReader interface {
+	Reading(ctx context.Context, req openmeteo.Request) (openmeteo.Reading, error)
 }
 
 var (
@@ -79,7 +95,7 @@ var (
 
 // Find returns the sighting with the given ID, or ErrNotFound.
 func (s Service) Find(ctx context.Context, id uuid.UUID) (Sighting, error) {
-	sight, err := s.repo.Find(ctx, id)
+	sight, err := s.store.Find(ctx, id)
 	if err != nil {
 		return Sighting{}, err
 	}
@@ -92,7 +108,7 @@ func (s Service) Find(ctx context.Context, id uuid.UUID) (Sighting, error) {
 // List returns the sightings matching the filter, with each one's
 // observers tidied for reading.
 func (s Service) List(ctx context.Context, filter ListFilter) ([]Sighting, error) {
-	sightings, err := s.repo.List(ctx, filter)
+	sightings, err := s.store.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +120,14 @@ func (s Service) List(ctx context.Context, filter ListFilter) ([]Sighting, error
 	return sightings, nil
 }
 
-// Create validates the params, checks the species exists and assigns
-// the sighting its identity before handing it to the repository.
+// Create validates the params and assigns the sighting its identity
+// before handing it to the store.
 func (s Service) Create(ctx context.Context, params CreateParams) (Sighting, error) {
 	if err := params.Validate(time.Now()); err != nil {
 		return Sighting{}, err
 	}
 
-	return s.repo.Create(ctx, uuid.New(), params)
+	return s.store.Create(ctx, uuid.New(), params)
 }
 
 // observers turns GBIF's pipe-separated observer list into a readable,

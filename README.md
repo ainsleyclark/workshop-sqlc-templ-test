@@ -1,5 +1,13 @@
 # Full-Stack Go: Domain-Driven Applications with sqlc and templ
 
+**About the author:**
+Ainsley Clark, Go Developer Advocate @ JetBrains
+
+- https://ainsleyclark.com/
+- https://github.com/ainsleyclark
+- https://www.linkedin.com/in/ainsleyclark/
+- https://x.com/ainsleydev/
+
 **Test Workshop**
 
 The workshop app: a site for **animal sightings**. Occurrence records come from
@@ -7,82 +15,54 @@ The workshop app: a site for **animal sightings**. Occurrence records come from
 server-side with [templ](https://templ.guide), and enriched with
 [Open-Meteo](https://open-meteo.com) weather.
 
-This repository is yours for the day. It's the finished app: we walk through it together, then
+This repository is yours for the day. It's the finished app, we walk through it together, then
 you make the site your own in your fork and push it there.
 
 ## Before you start
 
 You need Go (the version in `go.mod`), Git, `make` and a GitHub account. For the Theming block
 you'll also want [Claude Code](https://code.claude.com/docs/en/setup) and Python 3. GoLand is
-the preferred IDE for this workshop, and you should have received a promo code to use it.
+the preferred IDE for this workshop, and you should have had a voucher for it by email (see
+[GoLand and your voucher](#goland-and-your-voucher)).
 
 |             | macOS                                        | Linux                                   | Windows                                  |
 |-------------|----------------------------------------------|-----------------------------------------|------------------------------------------|
+| GoLand      | the [Toolbox App](https://www.jetbrains.com/toolbox-app/) or https://www.jetbrains.com/go/download | the same | the same |
 | Go          | `brew install go`                            | `sudo snap install go --classic`        | the `.msi` from https://go.dev/dl        |
 | Git         | comes with `make` below                      | `sudo apt install git`                  | `winget install Git.Git`                 |
 | `make`      | `xcode-select --install`                     | `sudo apt install make`                 | `winget install ezwinports.make`         |
 | Claude Code | `curl -fsSL https://claude.ai/install.sh \| bash` | the same                           | `irm https://claude.ai/install.ps1 \| iex` |
 | Python 3    | `brew install python`                        | `sudo apt install python3`              | `winget install Python.Python.3.12`      |
 
-You need Go 1.27.1 or newer: `go version` should say so, as setup won't download a newer one
-for you. (winget's Go lags behind Go's releases, hence the installer on Windows.)
 
-On Windows, open a new terminal after installing so the new commands are on your PATH, and run
-everything from PowerShell or Git Bash. (`apt` is Debian and Ubuntu; use your distribution's
-package manager otherwise.)
+### Prerequisites
 
-1. **Fork this repository** on GitHub: the *Fork* button at the top
-   of https://github.com/ainsleyclark/workshop-sqlc-templ-test. If you have the GitHub CLI,
-   `gh repo fork ainsleyclark/workshop-sqlc-templ-test --clone` forks and clones in one go.
-2. **Clone your fork** and open it:
+- Go 1.27.1 or newer on the device you bring, with ~/go/bin on your PATH.
+- A GitHub account.
 
-   ```sh
-   git clone git@github.com:<your-github-user>/workshop-sqlc-templ-test.git
-   cd workshop-sqlc-templ-test
-   ```
+### GoLand and your voucher
 
-   Open this folder in the IDE. The `go.mod` is at the root, so there is nothing else to point 
-   it at.
-3. **Run setup once.** It builds the Go tools the day needs from `vendor/`, so nothing is
-   downloaded.
+The voucher gives you GoLand free for three months. You don't have to use GoLand, but the
+walkthrough and the demos are in it.
 
-   ```sh
-   make setup
-   ```
+1. **Create a JetBrains Account** at https://account.jetbrains.com, if you haven't one already.
+2. **Redeem the code** from your email at https://www.jetbrains.com/store/redeem/, signed in to
+   that account.
+3. **Install GoLand** and open it. When it asks for a licence, choose *Log in to JetBrains 
+   Account* and sign in with the same account, so it picks the licence up.
 
-   It also installs the app as `workshop` in `~/go/bin`, so the commands the CLI's hints name,
-   like `workshop sightings find <id>`, work from anywhere. `make run` and `make web` always run
-   the code as it is now; `workshop` is as new as your last `make setup`.
+### Plugins and agents
 
-## During the day
+In GoLand, open *Settings* → *Plugins* → *Marketplace* and install:
 
-```sh
-make run        # the interactive CLI: migrate, seed, ingest sightings, list, stats, web
-make web        # serve the site on :8080
-make web-hot    # the same, with templ hot reload
-make templ      # regenerate templ after editing a .templ file
-make sqlc       # regenerate sqlc after editing a query or migration
-make test       # the tests
-make update     # pull the instructor's latest changes
-make push       # commit everything and push it to your fork
-make help       # everything else
-```
+- **[templ](https://plugins.jetbrains.com/plugin/23088-templ)**: highlighting and navigation 
+  for `.templ` files.
+- **[Air](https://plugins.jetbrains.com/plugin/33314-air)**: JetBrains' agent window.
 
-**On Windows**, run these from PowerShell or Git Bash. Every recipe in the `Makefile` is a plain
-`go` or `git` command, so if `make` won't cooperate, open `tools/setup.mk` and run the lines under
-`tools:` and `setup:` yourself. If `vendor/` ever fails you, `make tools-online` installs the
-same tools at the same versions from the internet. Only `make help` and `make kill-ports` need a
-Unix shell.
+### Slack
 
-Your copy starts without a database: `go run . db seed` fills `workshop.db` with sightings, then
-`make web` shows the site.
-`make run`, then `sightings` → `ingest`, fetches more. Ingest reads from a mock of GBIF and
-Open-Meteo bundled with the app, so it works offline and never hits GBIF's rate limit; it starts
-by itself, and `make run-live` uses the real APIs instead. If the database gets into a
-mess, `git checkout workshop.db` puts back the copy you last committed.
-
-Commit and push to **your fork** as you go (`make push`), `workshop.db` included, so the instructor
-can see what you've built. `/design-site` does this for you after each of Claude's turns.
+Join the workshop's Slack channel; it's the quickest way to ask for help. There are a lot of you, so
+answer each other's questions too.
 
 ## Where things are
 
@@ -103,3 +83,96 @@ architectures/              the opening tour, a ladder of five layouts; read, no
 
 Each of `internal/{domain,clients,infra,common}` has a README saying where its line falls.
 `SYLLABUS.md` is the course outline you were sent beforehand.
+
+## Get set up
+
+1. **Fork this repository** with the *Fork* button at the top of https://github.com/ainsleyclark/workshop-sqlc-templ-test.
+   Your fork is where you push all day.
+2. **Clone your fork** and open the folder in your IDE:
+
+   ```sh
+   git clone git@github.com:<your-github-user>/workshop-sqlc-templ-test.git
+   cd workshop-sqlc-templ-test
+   ```
+
+   No SSH key? Use `https://github.com/<your-github-user>/workshop-sqlc-templ-test.git` instead.
+3. **Run setup once.** It builds the tools from `vendor/` without downloading anything, and
+   installs the app as `workshop` in `~/go/bin`. It takes a couple of minutes.
+
+   ```sh
+   make setup
+   ```
+4. **Seed the database and start the site**, then open http://localhost:8080:
+
+   ```sh
+   go run . db seed
+   make web
+   ```
+
+## During the day
+
+```sh
+make run        # the interactive CLI: migrate, seed, ingest sightings, list, stats, web
+make run-live   # the same, against the real GBIF and Open-Meteo instead of the mock
+make web        # serve the site on :8080
+make web-hot    # the same, with templ hot reload
+make templ      # regenerate templ after editing a .templ file
+make sqlc       # regenerate sqlc after editing a query or migration
+make test       # the tests
+make key        # save the workshop's Claude key, for Claude Code in a terminal
+make load       # load test the home page for 20 seconds, while make web runs
+make load-pprof # the same, saving CPU and memory profiles
+make update     # pull the instructor's latest changes
+make push       # commit everything and push it to your fork
+make help       # everything else
+```
+
+- **More sightings:** `make run`, then `sightings` → `ingest`. It reads from a mock of GBIF and
+  Open-Meteo bundled with the app, so it works offline and never hits a rate limit. `make run-live`
+  uses the real APIs.
+- **Database in a mess?** `git checkout workshop.db` puts back the copy you last committed.
+- **Push to your fork as you go** with `make push`, `workshop.db` included, so the instructor can
+  see what you've built. `/design-site` does this for you after each of Claude's turns.
+
+**On Windows**, run these from PowerShell or Git Bash. Every recipe in the `Makefile` is a plain
+`go` or `git` command, so if `make` won't cooperate, open `tools/setup.mk` and run the lines under
+`tools:` and `setup:` yourself. If `vendor/` ever fails you, `make tools-online` installs the
+same tools at the same versions from the internet.
+
+## Theming your site
+
+This part is yours; you design your own home page with an agent and the `/design-site` skill.
+Think about the animals you like, the countries you'd show them in, and the colours and look you
+want. Don't be afraid to add some flair, and use your imagination.
+
+1. **Add the workshop's Claude key**, from Slack. In GoLand, press Ctrl twice to open Air, click
+   the accounts button at the bottom right, choose *More providers* → *Anthropic* and paste the
+   key. Not using GoLand? Run `make key` and paste it there instead: it saves the key in
+   `.claude/settings.local.json` (never committed), then run `claude` in this folder.
+2. **Type `/design-site`** and say what you'd like: a mood, some colours, a site you like. Paste
+   in screenshots, they help. Try and paste in screenshots and give it lots of content.It asks a 
+   few questions, then builds the page with you.
+3. **Choose what's on the page.** `web/handlers/home.go` decides which sightings the home page
+   lists: the `sighting.ListFilter` there takes animals, a country, a date range and a limit.
+
+Some ideas, if you want more than a restyle:
+
+- A page per sighting (`/sightings/{id}`), animal or country.
+- The weather on each sighting.
+- A statistics page.
+- The sightings on a map.
+- A photo gallery.
+- A custom 404 page.
+- Some 3D effects.
+
+## Competitions
+
+We're running two competitions as part of this workshop, with prizes for each winner. It's entirely
+your choice to take part.
+
+- **1. Best Social Post**: post on LinkedIn and tag **@Ainsley Clark**, **@JetBrains** and
+**@GopherCon Africa**. A picture of you, what you made, the conference or anything you enjoyed.
+If you tried Air, we'd love to hear what you thought of it.
+- **2. Best Website**: the best design or function, built in your fork during the Theming block.
+It's judged on what's pushed to your fork by the end of the day, so `make push` before you leave,
+and check `make web` still builds: a site that doesn't build can't be judged.

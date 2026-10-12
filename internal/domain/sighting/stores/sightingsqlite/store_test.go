@@ -217,7 +217,7 @@ func TestSighting_Store(t *testing.T) {
 func createLion(t *testing.T, ctx context.Context, queries db.Querier) species.Species {
 	t.Helper()
 
-	lion, err := speciessqlite.New(queries).Create(ctx, species.CreateParams{
+	lion, err := speciessqlite.New(queries).Create(ctx, uuid.New(), species.CreateParams{
 		GBIFKey:        5219404,
 		Kingdom:        "Animalia",
 		Phylum:         "Chordata",

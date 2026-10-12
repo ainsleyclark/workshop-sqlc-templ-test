@@ -18,8 +18,12 @@ type Store struct {
 var _ species.Store = (*Store)(nil)
 
 // New constructs a species SQLite store.
-func New(queries db.Querier) *Store { return &Store{queries: queries} }
+func New(queries db.Querier) *Store {
+	return &Store{queries: queries}
+}
 
+// Find returns the species for id, or species.ErrNotFound if it
+// doesn't exist.
 func (s Store) Find(ctx context.Context, id uuid.UUID) (species.Species, error) {
 	row, err := s.queries.SpeciesFind(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -31,6 +35,8 @@ func (s Store) Find(ctx context.Context, id uuid.UUID) (species.Species, error) 
 	return transform(row), nil
 }
 
+// FindByGbifKey returns the species for gbifKey, or
+// species.ErrNotFound if it doesn't exist.
 func (s Store) FindByGbifKey(ctx context.Context, gbifKey int) (species.Species, error) {
 	row, err := s.queries.SpeciesFindByGbifKey(ctx, int64(gbifKey))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -42,6 +48,7 @@ func (s Store) FindByGbifKey(ctx context.Context, gbifKey int) (species.Species,
 	return transform(row), nil
 }
 
+// List returns every species.
 func (s Store) List(ctx context.Context) ([]species.Species, error) {
 	rows, err := s.queries.SpeciesList(ctx)
 	if err != nil {
@@ -56,8 +63,10 @@ func (s Store) List(ctx context.Context) ([]species.Species, error) {
 	return result, nil
 }
 
-func (s Store) Create(ctx context.Context, in species.CreateParams) (species.Species, error) {
-	row, err := s.queries.SpeciesCreate(ctx, toSpeciesCreateParams(in))
+// Create persists a new species under id, or returns
+// species.ErrAlreadyExists if one is already there.
+func (s Store) Create(ctx context.Context, id uuid.UUID, in species.CreateParams) (species.Species, error) {
+	row, err := s.queries.SpeciesCreate(ctx, toSpeciesCreateParams(id, in))
 	if sqlite.IsUniqueViolation(err) {
 		return species.Species{}, species.ErrAlreadyExists
 	} else if err != nil {

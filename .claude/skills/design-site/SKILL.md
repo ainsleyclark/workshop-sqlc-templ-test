@@ -7,6 +7,11 @@ allowed-tools:
   - Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py *)
   - Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py *)
   - Bash(go build ./...)
+  - Bash(go run . stats)
+  - Bash(go run . animals)
+  - Bash(go run . db seed)
+  - Bash(go run . db migrate status)
+  - Bash(go run . db migrate up)
   - Bash(curl -s http://localhost:*)
   - Bash(rsvg-convert *)
   - Bash(magick *)
@@ -68,31 +73,37 @@ session.
 1. Read `web/` before anything else: `web.go` (the routes), `handlers/`, `views/layout/`,
    `views/pages/`, `views/components/` and `assets/`. `internal/domain/sighting/model.go` says
    what a sighting carries.
-2. Their brief: $ARGUMENTS
+2. Run `go run . stats` to check there are sightings to show. If it errors or reports nothing,
+   fix that first: see "The data" below.
+3. Their brief: $ARGUMENTS
 
    If that's empty, ask what they'd like the site to look like, then wait for the answer. A mood,
    some colours, a site they like or a screenshot pasted in: whatever they have.
-3. Design the home page only. Don't ask which pages they'd like or offer more: one page done well
+4. Design the home page only. Don't ask which pages they'd like or offer more: one page done well
    is the session. Nav links can point at its sections (`/#sightings`). If they ask for another
    page later, "Pages and routes" below says how.
-4. Ask one round of questions, in a single AskUserQuestion call, and only those the brief leaves
-   open. At most four, roughly:
+5. Ask one round of questions, in a single AskUserQuestion call, and only those the brief leaves
+   open. At most four, from these:
    1. **The feel**: options built from their brief's words, such as "calm and natural", "bold,
       like a poster" or "dark, like a night safari".
    2. **The colours**: two or three sets, each colour named with its hex.
    3. **How the sightings are shown**: photo cards, a map of where they were seen, a list like a
       spreadsheet, or a timeline.
-   4. **Extras** (`multiSelect`): the blocks that suit the brief, in the words "Blocks" below
+   4. **Which animals** (`multiSelect`): "every animal" first, then a few that suit the brief,
+      picked from `go run . animals` and given plain names ("cheetah", "humpback whale"). Skip it
+      when the brief already says, such as "big cats". The answer goes into the home page's
+      filter: see "The data".
+   5. **Extras** (`multiSelect`): the blocks that suit the brief, in the words "Blocks" below
       gives them.
 
    The look is never preset: build the feel, colours and lettering from their words and from
    design search results, and if they name colours or fonts, use those. The features may come
    from the blocks. When the brief asks for something striking, moving or 3D, a three.js scene
    can be one of the extras, never the only one and never pushed.
-5. The block is an hour. After that one round, build the whole look in one go so they see it
+6. The block is an hour. After that one round, build the whole look in one go so they see it
    within about ten minutes, then work in small rounds of their choosing. Don't ask a second
    round of questions before they've seen the first result.
-6. If they aren't running it yet, suggest `make web` in another terminal, with
+7. If they aren't running it yet, suggest `make web` in another terminal, with
    http://localhost:8080 open. It doesn't reload by itself: see "See the site" below.
 
 ## Design data
@@ -118,6 +129,30 @@ On Windows the command is `python` rather than `python3`.
 - Run it from the app's folder, where `.claude/skills/` is, whatever ui-ux-pro-max's own examples
   assume about the repository root.
 - If it fails because Python isn't installed, say so and carry on from their brief.
+
+## The data
+
+The sightings live in `workshop.db` in the app folder. It's theirs, and it goes to their fork with
+everything else. `go run . stats` reads it:
+
+- **"database migrations are pending"**: run `go run . db migrate up`, then `go run . db seed`.
+- **"Nothing to report yet"**: the database is empty, so run `go run . db seed`. It takes a few
+  seconds, reads the workshop's bundled copy of GBIF (no network, no key), and is safe to run
+  again: sightings already there are skipped.
+- **Anything else** (an error about the file, a table or a column): run
+  `go run . db migrate status` to see where it stands, and explain in plain words. If seeding
+  doesn't fix it, offer `go run . db reset --yes` and then `go run . db seed`. Reset deletes every
+  sighting, so ask before running it.
+
+Their `make web` reads the database on every request, so a refresh shows new data without a
+restart. Don't use `--live`, `sightings ingest` or `db migrate down`, and never delete or edit
+`workshop.db` by hand.
+
+The database holds every animal the app knows. Which ones the home page shows is decided in
+`web/handlers/home.go`, by the `sighting.ListFilter` passed to `List`: set `Animals` to the ones they
+chose, using the constants in `internal/domain/species/animal.go` (`species.AnimalCheetah`)
+that `go run . animals` lists. `Country` and `FromDate` narrow it further, and `Limit` caps it.
+Leave `Animals` empty for every animal.
 
 ## Pages and routes
 
@@ -189,7 +224,8 @@ their approach, under `starter/cmd/themes/internal/`:
 
 ## Keep it building
 
-- Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`.
+- Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`. The
+  `go run .` commands in "The data" are the only things you run against the rest of the app.
 - `web/handlers/home.go` is theirs to change, including the `ListFilter` that picks which sightings
   the home page shows. Keep the home page at `/` listing sightings through `sightings.List` and
   showing each one's observers (`s.RecordedBy`, already tidied by the service), whether on a card,

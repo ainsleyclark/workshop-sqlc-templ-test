@@ -50,6 +50,11 @@ func TestWeather_Store(t *testing.T) {
 			assert.Equal(t, observedAt, got.ObservedAt)
 		})
 
+		t.Run("Rejects duplicate ID", func(t *testing.T) {
+			_, err := store.Create(ctx, fixture.ID, newCreateParams())
+			assert.ErrorIs(t, err, weather.ErrAlreadyExists)
+		})
+
 		t.Run("Internal error", func(t *testing.T) {
 			got, err := failingStore.Create(ctx, uuid.New(), newCreateParams())
 			assert.ErrorIs(t, err, errInternal)
