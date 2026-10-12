@@ -31,8 +31,8 @@ type Service struct {
 	store     Store
 	species   SpeciesReadWriter
 	weather   WeatherWriter
-	gbif      SpeciesSearcher
-	openmeteo WeatherReader
+	gbif      *gbif.Client
+	openmeteo *openmeteo.Client
 }
 
 // NewService returns a Service backed by the given store.
@@ -41,8 +41,8 @@ func NewService(
 	store Store,
 	speciesSvc SpeciesReadWriter,
 	weatherSvc WeatherWriter,
-	gbifClient SpeciesSearcher,
-	openMeteoClient WeatherReader,
+	gbifClient *gbif.Client,
+	openMeteoClient *openmeteo.Client,
 ) *Service {
 	return &Service{
 		logger:    logger,
@@ -64,19 +64,6 @@ type SpeciesReadWriter interface {
 // WeatherWriter is required by ingest to create weather records.
 type WeatherWriter interface {
 	Create(ctx context.Context, params weather.CreateParams) (weather.Weather, error)
-}
-
-// SpeciesSearcher is required by ingest to search GBIF for
-// occurrences and look up the species each one belongs to.
-type SpeciesSearcher interface {
-	Occurrences(ctx context.Context, args gbif.OccurrencesSearchArgs) (gbif.PaginatedResponse[gbif.Occurrence], error)
-	Species(ctx context.Context, key int) (gbif.Species, error)
-}
-
-// WeatherReader is required by ingest to fetch the weather where
-// and when an occurrence happened.
-type WeatherReader interface {
-	Reading(ctx context.Context, req openmeteo.Request) (openmeteo.Reading, error)
 }
 
 var (

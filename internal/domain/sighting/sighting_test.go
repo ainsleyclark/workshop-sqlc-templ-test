@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 	"uuid"
+	"workshop/internal/clients/gbif"
+	"workshop/internal/clients/openmeteo"
 	"workshop/internal/common/logs"
 	"workshop/internal/domain/sighting"
 	"workshop/internal/domain/sighting/country"
@@ -39,8 +41,8 @@ const lionKey = 5219404
 func setup(
 	t *testing.T,
 	fail bool,
-	gbifClient sighting.SpeciesSearcher,
-	openMeteoClient sighting.WeatherReader,
+	gbifClient *gbif.Client,
+	openMeteoClient *openmeteo.Client,
 ) (context.Context, *sighting.Service, *species.Service) {
 	t.Helper()
 

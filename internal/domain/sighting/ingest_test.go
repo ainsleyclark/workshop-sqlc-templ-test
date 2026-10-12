@@ -2,9 +2,13 @@ package sighting_test
 
 import (
 	"context"
-	"errors"
+	"encoding/json/v2"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 	"uuid"
@@ -18,56 +22,89 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeGBIF answers ingest from memory, so the domain's tests are written
-// in the client's Go types rather than GBIF's JSON.
-type fakeGBIF struct {
+// apis stands in for GBIF and Open-Meteo on one test server, so ingest
+// runs through the real clients without leaving the process.
+type apis struct {
+	t         *testing.T
+	gbif      *gbif.Client
+	openmeteo *openmeteo.Client
+
 	// occurrences is everything the search matches, served a page at a time.
 	occurrences []gbif.Occurrence
 	// pageSize caps each page, as GBIF caps it at 300. Zero means no cap.
 	pageSize int
-	// err fails every search; speciesErr fails every species lookup.
-	err        error
-	speciesErr error
+	// reading is the hour of weather every archive request gets back.
+	reading openmeteo.Reading
+	// searchStatus, speciesStatus and weatherStatus fail that endpoint
+	// with the given HTTP status when set.
+	searchStatus, speciesStatus, weatherStatus int
 
 	// searches and lookups record what ingest asked for.
-	searches []gbif.OccurrencesSearchArgs
+	searches []url.Values
 	lookups  int
 }
 
-func (f *fakeGBIF) Occurrences(_ context.Context, args gbif.OccurrencesSearchArgs) (gbif.PaginatedResponse[gbif.Occurrence], error) {
-	f.searches = append(f.searches, args)
-	if f.err != nil {
-		return gbif.PaginatedResponse[gbif.Occurrence]{}, f.err
-	}
+// newAPIs serves both APIs from one server, under the same paths the
+// bundled mock uses.
+func newAPIs(t *testing.T) *apis {
+	t.Helper()
 
-	start := min(args.Offset, len(f.occurrences))
-	end := len(f.occurrences)
-	if args.Limit > 0 {
-		end = min(start+args.Limit, end)
-	}
-	if f.pageSize > 0 {
-		end = min(start+f.pageSize, end)
-	}
+	a := &apis{t: t, reading: settledReading}
 
-	return gbif.PaginatedResponse[gbif.Occurrence]{
-		Offset:       args.Offset,
-		Limit:        args.Limit,
-		EndOfRecords: end == len(f.occurrences),
-		Count:        int64(len(f.occurrences)),
-		Results:      f.occurrences[start:end],
-	}, nil
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /gbif/v1/occurrence/search", a.search)
+	mux.HandleFunc("GET /gbif/v1/species/{key}", a.species)
+	mux.HandleFunc("GET /weather/v1/archive", a.archive)
+
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	a.gbif = gbif.New(srv.URL + "/gbif/v1")
+	a.openmeteo = openmeteo.New(srv.URL + "/weather/v1")
+
+	return a
 }
 
-// Species returns a lion under whichever key is asked for, so each new
-// key saves a species of its own.
-func (f *fakeGBIF) Species(_ context.Context, key int) (gbif.Species, error) {
-	f.lookups++
-	if f.speciesErr != nil {
-		return gbif.Species{}, f.speciesErr
+func (a *apis) search(w http.ResponseWriter, r *http.Request) {
+	a.searches = append(a.searches, r.URL.Query())
+	if a.searchStatus != 0 {
+		w.WriteHeader(a.searchStatus)
+		return
 	}
 
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	start := min(offset, len(a.occurrences))
+	end := len(a.occurrences)
+	if limit > 0 {
+		end = min(start+limit, end)
+	}
+	if a.pageSize > 0 {
+		end = min(start+a.pageSize, end)
+	}
+
+	a.write(w, gbif.PaginatedResponse[gbif.Occurrence]{
+		Offset:       offset,
+		Limit:        limit,
+		EndOfRecords: end == len(a.occurrences),
+		Count:        int64(len(a.occurrences)),
+		Results:      a.occurrences[start:end],
+	})
+}
+
+// species returns a lion under whichever key is asked for, so each new
+// key saves a species of its own.
+func (a *apis) species(w http.ResponseWriter, r *http.Request) {
+	a.lookups++
+	if a.speciesStatus != 0 {
+		w.WriteHeader(a.speciesStatus)
+		return
+	}
+
+	key, _ := strconv.Atoi(r.PathValue("key"))
 	lion := lionParams()
-	return gbif.Species{
+	a.write(w, gbif.Species{
 		Key:            key,
 		Kingdom:        lion.Kingdom,
 		Phylum:         lion.Phylum,
@@ -80,29 +117,46 @@ func (f *fakeGBIF) Species(_ context.Context, key int) (gbif.Species, error) {
 		ScientificName: lion.ScientificName,
 		CanonicalName:  lion.CanonicalName,
 		VernacularName: lion.VernacularName,
-	}, nil
+	})
 }
 
-// fakeOpenMeteo answers every request with the same hour of weather,
-// placed where and when it was asked for.
-type fakeOpenMeteo struct {
-	reading openmeteo.Reading
-	err     error
-}
-
-func (f *fakeOpenMeteo) Reading(_ context.Context, req openmeteo.Request) (openmeteo.Reading, error) {
-	if f.err != nil {
-		return openmeteo.Reading{}, f.err
+// archive answers with the same hour of weather, placed where and when
+// it was asked for, in the archive's one-entry-per-hour arrays.
+func (a *apis) archive(w http.ResponseWriter, r *http.Request) {
+	if a.weatherStatus != 0 {
+		w.WriteHeader(a.weatherStatus)
+		return
 	}
 
-	r := f.reading
-	r.Coordinates = req.Coordinates
-	r.Time = req.Time.UTC().Truncate(time.Hour)
+	q := r.URL.Query()
+	latitude, _ := strconv.ParseFloat(q.Get("latitude"), 64)
+	longitude, _ := strconv.ParseFloat(q.Get("longitude"), 64)
 
-	return r, nil
+	a.write(w, map[string]any{
+		"latitude":  latitude,
+		"longitude": longitude,
+		"hourly": map[string]any{
+			"time":                 []string{q.Get("start_hour")},
+			"temperature_2m":       []float64{a.reading.Temperature},
+			"apparent_temperature": []float64{a.reading.ApparentTemperature},
+			"relative_humidity_2m": []int{a.reading.Humidity},
+			"precipitation":        []float64{a.reading.Precipitation},
+			"rain":                 []float64{a.reading.Rain},
+			"snowfall":             []float64{a.reading.Snowfall},
+			"cloud_cover":          []int{a.reading.CloudCover},
+			"weather_code":         []int{int(a.reading.Code)},
+			"wind_speed_10m":       []float64{a.reading.WindSpeed},
+			"wind_gusts_10m":       []float64{a.reading.WindGusts},
+			"wind_direction_10m":   []int{a.reading.WindDirection},
+		},
+	})
 }
 
-// settledReading is the weather fakeOpenMeteo reports by default.
+func (a *apis) write(w http.ResponseWriter, v any) {
+	require.NoError(a.t, json.MarshalWrite(w, v))
+}
+
+// settledReading is the weather the archive reports by default.
 var settledReading = openmeteo.Reading{
 	Temperature:         26.3,
 	ApparentTemperature: 28.1,
@@ -141,28 +195,24 @@ func newOccurrence(key int64) gbif.Occurrence {
 // described, which needs a store that reads but won't write.
 func TestService_Ingest(t *testing.T) {
 	type Test struct {
-		ctx       context.Context
-		svc       *sighting.Service
-		species   *species.Service
-		gbif      *fakeGBIF
-		openMeteo *fakeOpenMeteo
+		ctx     context.Context
+		svc     *sighting.Service
+		species *species.Service
+		apis    *apis
 	}
 
 	setupIngest := func(t *testing.T, fail bool) Test {
 		t.Helper()
 
-		test := Test{
-			gbif:      &fakeGBIF{},
-			openMeteo: &fakeOpenMeteo{reading: settledReading},
-		}
-		test.ctx, test.svc, test.species = setup(t, fail, test.gbif, test.openMeteo)
+		test := Test{apis: newAPIs(t)}
+		test.ctx, test.svc, test.species = setup(t, fail, test.apis.gbif, test.apis.openmeteo)
 
 		return test
 	}
 
 	t.Run("Creates a sighting per occurrence", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
 
 		got, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -174,7 +224,7 @@ func TestService_Ingest(t *testing.T) {
 	t.Run("Maps the occurrence onto the sighting", func(t *testing.T) {
 		test := setupIngest(t, false)
 		occ := newOccurrence(1)
-		test.gbif.occurrences = []gbif.Occurrence{occ}
+		test.apis.occurrences = []gbif.Occurrence{occ}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -216,7 +266,7 @@ func TestService_Ingest(t *testing.T) {
 		occ.Media[0].Identifier = "https://example.com/lion.jpg"
 		occ.Media[0].Creator = "Ada"
 		occ.Media[0].License = "CC BY 4.0"
-		test.gbif.occurrences = []gbif.Occurrence{occ}
+		test.apis.occurrences = []gbif.Occurrence{occ}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -238,11 +288,11 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Fetches a new species from GBIF once", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
-		assert.Equal(t, 1, test.gbif.lookups)
+		assert.Equal(t, 1, test.apis.lookups)
 
 		got, err := test.svc.Find(test.ctx, res.Created[0].ID)
 		require.NoError(t, err)
@@ -252,18 +302,18 @@ func TestService_Ingest(t *testing.T) {
 	t.Run("Reuses a species already stored", func(t *testing.T) {
 		test := setupIngest(t, false)
 		lion := seedLion(t, test.ctx, test.species)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
 		require.Len(t, res.Created, 1)
-		assert.Zero(t, test.gbif.lookups)
+		assert.Zero(t, test.apis.lookups)
 		assert.Equal(t, lion.ID, res.Created[0].Species.ID)
 	})
 
 	t.Run("Records the weather", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -279,7 +329,7 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Builds the search from the request", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
 		from := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
 		to := time.Date(2025, time.December, 31, 0, 0, 0, 0, time.UTC)
 
@@ -295,25 +345,24 @@ func TestService_Ingest(t *testing.T) {
 			DateTo:      to,
 		})
 		require.NoError(t, err)
-		require.Len(t, test.gbif.searches, 1)
-		assert.Equal(t, gbif.OccurrencesSearchArgs{
-			PaginationOptions: gbif.PaginationOptions{Limit: 10, Offset: 20},
-			Country:           "KE",
-			Latitude:          -1.5,
-			Longitude:         35.1,
-			RadiusMiles:       25,
-			DateFrom:          from,
-			DateTo:            to,
-			TaxonKeys:         []int{5219404, 2435270},
-		}, test.gbif.searches[0])
+		require.Len(t, test.apis.searches, 1)
+		assert.Equal(t, url.Values{
+			"limit":        {"10"},
+			"offset":       {"20"},
+			"country":      {"KE"},
+			"geo_distance": {"25mi,-1.5,35.1"},
+			"eventDate":    {"2025-01-01,2025-12-31"},
+			"taxonKey":     {"5219404", "2435270"},
+			"checklistKey": {"d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"},
+		}, test.apis.searches[0])
 	})
 
 	t.Run("Pages until the limit", func(t *testing.T) {
 		test := setupIngest(t, false)
 		for key := range int64(6) {
-			test.gbif.occurrences = append(test.gbif.occurrences, newOccurrence(key+1))
+			test.apis.occurrences = append(test.apis.occurrences, newOccurrence(key+1))
 		}
-		test.gbif.pageSize = 2
+		test.apis.pageSize = 2
 
 		var pages []int
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{
@@ -324,27 +373,23 @@ func TestService_Ingest(t *testing.T) {
 		assert.Equal(t, 5, res.Fetched)
 		assert.Len(t, res.Created, 5)
 		assert.Equal(t, []int{2, 4, 5}, pages)
-		assert.Equal(t, []gbif.PaginationOptions{
-			{Limit: 5, Offset: 0},
-			{Limit: 3, Offset: 2},
-			{Limit: 1, Offset: 4},
-		}, paginationOf(test.gbif.searches))
+		assert.Len(t, test.apis.searches, 3)
 	})
 
 	t.Run("Stops at the end of records", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2), newOccurrence(3)}
-		test.gbif.pageSize = 2
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2), newOccurrence(3)}
+		test.apis.pageSize = 2
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
 		assert.Equal(t, 3, res.Fetched)
-		assert.Len(t, test.gbif.searches, 2)
+		assert.Len(t, test.apis.searches, 2)
 	})
 
 	t.Run("Skips what a skipper rejects", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{
 			Limit: 10,
@@ -360,7 +405,7 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Counts duplicates on re-ingest", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1), newOccurrence(2)}
 
 		_, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -373,8 +418,8 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Counts a failed species lookup", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
-		test.gbif.speciesErr = errors.New("species lookup failed")
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.speciesStatus = http.StatusInternalServerError
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -384,8 +429,8 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Counts a failed weather reading", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
-		test.openMeteo.err = errors.New("archive unavailable")
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.weatherStatus = http.StatusServiceUnavailable
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -397,7 +442,7 @@ func TestService_Ingest(t *testing.T) {
 		test := setupIngest(t, false)
 		occ := newOccurrence(1)
 		occ.DecimalLatitude = 100
-		test.gbif.occurrences = []gbif.Occurrence{occ}
+		test.apis.occurrences = []gbif.Occurrence{occ}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -409,7 +454,7 @@ func TestService_Ingest(t *testing.T) {
 		test := setupIngest(t, false)
 		occ := newOccurrence(1)
 		occ.CountryCode = "KEN"
-		test.gbif.occurrences = []gbif.Occurrence{occ}
+		test.apis.occurrences = []gbif.Occurrence{occ}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -419,8 +464,8 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Counts weather that breaks the rules", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
-		test.openMeteo.reading.Humidity = 101
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.reading.Humidity = 101
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -432,7 +477,7 @@ func TestService_Ingest(t *testing.T) {
 		test := setupIngest(t, false)
 		occ := newOccurrence(1)
 		occ.EventDate = time.Now().AddDate(0, 0, 1)
-		test.gbif.occurrences = []gbif.Occurrence{occ}
+		test.apis.occurrences = []gbif.Occurrence{occ}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
@@ -442,12 +487,12 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("Counts a store failure", func(t *testing.T) {
 		test := setupIngest(t, true)
-		test.gbif.occurrences = []gbif.Occurrence{newOccurrence(1)}
+		test.apis.occurrences = []gbif.Occurrence{newOccurrence(1)}
 
 		res, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
 		require.NoError(t, err)
 		assert.Equal(t, 1, res.Failed)
-		assert.Zero(t, test.gbif.lookups)
+		assert.Zero(t, test.apis.lookups)
 	})
 
 	t.Run("No results", func(t *testing.T) {
@@ -459,18 +504,9 @@ func TestService_Ingest(t *testing.T) {
 
 	t.Run("GBIF error", func(t *testing.T) {
 		test := setupIngest(t, false)
-		test.gbif.err = errInternal
+		test.apis.searchStatus = http.StatusInternalServerError
 
 		_, err := test.svc.Ingest(test.ctx, sighting.IngestRequest{Limit: 10})
-		assert.ErrorIs(t, err, errInternal)
+		require.Error(t, err)
 	})
-}
-
-// paginationOf returns the page each search asked for.
-func paginationOf(searches []gbif.OccurrencesSearchArgs) []gbif.PaginationOptions {
-	out := make([]gbif.PaginationOptions, len(searches))
-	for i, s := range searches {
-		out[i] = s.PaginationOptions
-	}
-	return out
 }
