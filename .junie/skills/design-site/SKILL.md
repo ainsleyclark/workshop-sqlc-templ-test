@@ -73,16 +73,20 @@ session.
 1. Read `web/` before anything else: `web.go` (the routes), `handlers/`, `views/layout/`,
    `views/pages/`, `views/components/` and `assets/`. `internal/domain/sighting/model.go` says
    what a sighting carries.
-2. Run `go run . stats` to check there are sightings to show. If it errors or reports nothing,
+2. Check `internal/domain/sighting/stores/sightingsqlite/store.go` for
+   `fmt.Sprintf("store: listing row %d of %v", i+1, rows)`. If it's still there, it's the slow log
+   line from the Profiling block, and `go run . stats` crawls until it's gone. Tell them, and offer
+   to fix it (delete the line, or log `len(rows)` as an attribute) before running anything else.
+3. Run `go run . stats` to check there are sightings to show. If it errors or reports nothing,
    fix that first: see "The data" below.
-3. Their brief: $ARGUMENTS
+4. Their brief: $ARGUMENTS
 
    If that's empty, ask what they'd like the site to look like, then wait for the answer. A mood,
    some colours, a site they like or a screenshot pasted in: whatever they have.
-4. Design the home page only. Don't ask which pages they'd like or offer more: one page done well
+5. Design the home page only. Don't ask which pages they'd like or offer more: one page done well
    is the session. Nav links can point at its sections (`/#sightings`). If they ask for another
    page later, "Pages and routes" below says how.
-5. Ask one round of questions, in a single AskUserQuestion call, and only those the brief leaves
+6. Ask one round of questions, in a single AskUserQuestion call, and only those the brief leaves
    open. At most four, from these:
    1. **The feel**: options built from their brief's words, such as "calm and natural", "bold,
       like a poster" or "dark, like a night safari".
@@ -100,10 +104,10 @@ session.
    design search results, and if they name colours or fonts, use those. The features may come
    from the blocks. When the brief asks for something striking, moving or 3D, a three.js scene
    can be one of the extras, never the only one and never pushed.
-6. The block is an hour. After that one round, build the whole look in one go so they see it
+7. The block is an hour. After that one round, build the whole look in one go so they see it
    within about ten minutes, then work in small rounds of their choosing. Don't ask a second
    round of questions before they've seen the first result.
-7. If they aren't running it yet, suggest `make web` in another terminal, with
+8. If they aren't running it yet, suggest `make web` in another terminal, with
    http://localhost:8080 open. It doesn't reload by itself: see "See the site" below.
 
 ## Design data
@@ -211,8 +215,9 @@ make them look like the rest of their site.
 
 ## Keep it building
 
-- Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`. The
-  `go run .` commands in "The data" are the only things you run against the rest of the app.
+- Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`. The one
+  exception is the log line fix in "Start". The `go run .` commands in "The data" are the only
+  things you run against the rest of the app.
 - `web/handlers/home.go` is theirs to change, including the `ListFilter` that picks which sightings
   the home page shows. Keep the home page at `/` listing sightings through `sightings.List` and
   showing each one's observers (`s.RecordedBy`, already tidied by the service), whether on a card,

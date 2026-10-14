@@ -63,7 +63,7 @@ func dbCmd(app *app) *cli.Command {
 						return fmt.Errorf("applying migrations: %w", err)
 					}
 					return runIngest(ctx, app, sighting.IngestRequest{
-						Limit: 5000,
+						Limit: 500,
 					})
 				},
 			},
