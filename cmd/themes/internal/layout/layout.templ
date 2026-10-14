@@ -1,0 +1,51 @@
+package layout
+
+templ Base(props BaseProps) {
+	<!DOCTYPE html>
+	<html lang="en-GB">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ props.Title }</title>
+			if props.Description != "" {
+				<meta name="description" content={ props.Description }/>
+			}
+			if props.Fonts != "" {
+				<link rel="preconnect" href="https://fonts.googleapis.com"/>
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+				<link rel="stylesheet" href={ props.Fonts }/>
+			}
+			if props.Map != nil {
+				<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+			}
+			<link rel="stylesheet" href={ props.Stylesheet }/>
+		</head>
+		<body
+			if props.Class != "" {
+				class={ props.Class }
+			}
+		>
+			if props.Skip.Label != "" {
+				<a class="skip" href={ templ.URL("#" + props.Skip.Target) }>{ props.Skip.Label }</a>
+			}
+			if props.Header != nil {
+				@props.Header
+			}
+			<main
+				if props.MainClass != "" {
+					class={ props.MainClass }
+				}
+			>
+				{ children... }
+			</main>
+			if props.Footer != nil {
+				@props.Footer
+			}
+			if props.Map != nil {
+				@templ.JSONScript("map-points", props.Map.Points)
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+				<script src="/assets/js/sightings-map.js" defer></script>
+			}
+		</body>
+	</html>
+}

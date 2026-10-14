@@ -1,0 +1,508 @@
+/*
+ * Kenyan Coast — Field Notes.
+ *
+ * A printed page: Bodoni display, wide margins, hairline rules and a
+ * warm paper ground. Nine records is few enough to read rather than
+ * scan, so this theme sets them as articles with real photographs
+ * instead of a grid of cards. It commits to a light palette.
+ */
+
+:root {
+	color-scheme: light;
+
+	--paper: #fbf6ee;
+	--paper-deep: #f4ecdd;
+	--ink: #1a1512;
+	--ink-soft: #57493c;
+	--ink-faint: #796958;
+	--rule: #ddcfb8;
+
+	--terracotta: #9a3412;
+	--ochre: #a8600b;
+	--sea: #14554f;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 20px;
+	--space-5: 32px;
+	--space-6: 48px;
+	--space-7: 72px;
+
+	--display: "Libre Bodoni", Georgia, "Times New Roman", serif;
+	--body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body.field {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font: 16px/1.65 var(--body);
+	-webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+	margin: 0;
+	font-family: var(--display);
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+
+a {
+	color: var(--terracotta);
+}
+
+:focus-visible {
+	outline: 2px solid var(--terracotta);
+	outline-offset: 3px;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.skip {
+	position: absolute;
+	left: var(--space-4);
+	top: -4rem;
+	z-index: 1000;
+	padding: var(--space-3) var(--space-4);
+	background: var(--terracotta);
+	color: var(--paper);
+	font-weight: 600;
+	text-decoration: none;
+	transition: top 160ms ease;
+}
+
+.skip:focus {
+	top: var(--space-4);
+}
+
+.tnum {
+	font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Nameplate ---------- */
+
+.nameplate {
+	padding: var(--space-5) var(--space-4) 0;
+	max-width: 76rem;
+	margin: 0 auto;
+}
+
+.nameplate__rule {
+	height: 1px;
+	background: var(--ink);
+}
+
+.nameplate__rule + .nameplate__rule,
+.nameplate__row + .nameplate__rule {
+	background: var(--rule);
+}
+
+.nameplate__row {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4) 0 var(--space-3);
+	text-align: center;
+	justify-items: center;
+}
+
+.nameplate__issue {
+	display: flex;
+	gap: var(--space-2);
+	margin: 0;
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+}
+
+.nameplate__title {
+	font-size: clamp(2.4rem, 9vw, 4.2rem);
+	line-height: 0.95;
+	letter-spacing: -0.02em;
+}
+
+.nameplate__nav {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: var(--space-1) var(--space-2);
+}
+
+.nameplate__nav a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: var(--space-2) var(--space-3);
+	color: var(--ink-soft);
+	font-size: 0.75rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	text-decoration: none;
+	border-bottom: 2px solid transparent;
+	cursor: pointer;
+	transition: color 160ms ease, border-color 160ms ease;
+}
+
+.nameplate__nav a:hover {
+	color: var(--ink);
+	border-bottom-color: var(--rule);
+}
+
+.nameplate__nav a[aria-current="page"] {
+	color: var(--terracotta);
+	border-bottom-color: var(--terracotta);
+}
+
+/* ---------- Lede ---------- */
+
+main {
+	max-width: 76rem;
+	margin: 0 auto;
+	padding: var(--space-6) var(--space-4) var(--space-7);
+}
+
+.lede {
+	display: grid;
+	gap: var(--space-6);
+	grid-template-columns: minmax(0, 1fr);
+	margin-bottom: var(--space-6);
+}
+
+@media (min-width: 60rem) {
+	.lede {
+		grid-template-columns: minmax(0, 1fr) 16rem;
+		gap: var(--space-7);
+	}
+}
+
+.lede__head {
+	font-size: clamp(2rem, 6vw, 3.4rem);
+	line-height: 1.02;
+	text-wrap: balance;
+	margin-bottom: var(--space-4);
+}
+
+.lede__stand {
+	margin: 0 0 var(--space-4);
+	font-family: var(--display);
+	font-style: italic;
+	font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+	color: var(--ink-soft);
+	max-width: 34ch;
+}
+
+.lede__intro {
+	margin: 0;
+	max-width: 62ch;
+	font-size: 1.02rem;
+	color: var(--ink-soft);
+}
+
+.lede__intro::first-letter {
+	float: left;
+	font-family: var(--display);
+	font-size: 3.6em;
+	line-height: 0.82;
+	padding: 0.08em 0.1em 0 0;
+	color: var(--terracotta);
+}
+
+/* ---------- Margin ---------- */
+
+.margin {
+	border-top: 1px solid var(--ink);
+	padding-top: var(--space-4);
+	display: grid;
+	gap: var(--space-4);
+	align-content: start;
+}
+
+.margin__figure {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--space-3);
+	padding-bottom: var(--space-2);
+	border-bottom: 1px solid var(--rule);
+}
+
+.margin__figure strong {
+	font-family: var(--display);
+	font-size: 1.7rem;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+.margin__figure span {
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
+.margin__list h3 {
+	font-family: var(--body);
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--ink-faint);
+	margin-bottom: var(--space-2);
+}
+
+.margin__list ul {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: var(--space-2);
+}
+
+.margin__list li {
+	display: flex;
+	justify-content: space-between;
+	gap: var(--space-3);
+	font-size: 0.86rem;
+	text-transform: capitalize;
+}
+
+.margin__list em {
+	font-style: normal;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink-faint);
+}
+
+/* ---------- Inset map ---------- */
+
+.inset {
+	margin: 0 0 var(--space-6);
+}
+
+.inset__map {
+	height: min(46vh, 24rem);
+	border: 1px solid var(--rule);
+	background: var(--paper-deep);
+}
+
+.inset__map.is-unavailable {
+	display: grid;
+	place-items: center;
+	height: 7rem;
+}
+
+.inset__map.is-unavailable::after {
+	content: "Map unavailable — every record is written out below.";
+	color: var(--ink-faint);
+	font-size: 0.85rem;
+}
+
+.inset figcaption {
+	margin-top: var(--space-2);
+	color: var(--ink-faint);
+	font-size: 0.80rem;
+	font-style: italic;
+}
+
+.leaflet-container {
+	font-family: var(--body);
+	background: var(--paper-deep);
+}
+
+.map-popup {
+	font-size: 0.82rem;
+	line-height: 1.5;
+}
+
+/* ---------- Entries ---------- */
+
+.entries {
+	display: grid;
+	gap: var(--space-7);
+	border-top: 1px solid var(--ink);
+	padding-top: var(--space-6);
+}
+
+.entry {
+	display: grid;
+	gap: var(--space-4);
+	grid-template-columns: minmax(0, 1fr);
+	padding-bottom: var(--space-6);
+	border-bottom: 1px solid var(--rule);
+	scroll-margin-top: var(--space-4);
+}
+
+.entry:last-child {
+	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+@media (min-width: 54rem) {
+	.entry {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+		gap: var(--space-6);
+		align-items: start;
+	}
+
+	/* Alternate which side the plate falls on, as a spread would. */
+	.entry:nth-child(even) .entry__text {
+		order: 2;
+	}
+}
+
+.entry__folio {
+	margin: 0 0 var(--space-2);
+	font-family: var(--display);
+	font-size: 0.90rem;
+	color: var(--terracotta);
+	letter-spacing: 0.1em;
+}
+
+.entry__title {
+	font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+	line-height: 1.08;
+	text-transform: capitalize;
+	text-wrap: balance;
+}
+
+.entry__latin {
+	margin: var(--space-1) 0 var(--space-3);
+	font-family: var(--display);
+	font-style: italic;
+	color: var(--ink-faint);
+}
+
+.entry__byline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	margin: 0 0 var(--space-4);
+	padding-bottom: var(--space-3);
+	border-bottom: 1px solid var(--rule);
+	font-size: 0.78rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--ink-soft);
+}
+
+.entry__remarks {
+	margin: 0 0 var(--space-4);
+	max-width: 58ch;
+	overflow-wrap: anywhere;
+}
+
+.entry__meta {
+	display: grid;
+	gap: var(--space-3);
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	margin: 0 0 var(--space-4);
+}
+
+.entry__meta dt {
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
+.entry__meta dd {
+	margin: var(--space-1) 0 0;
+	font-size: 0.92rem;
+	overflow-wrap: anywhere;
+}
+
+.entry__source a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	font-size: 0.85rem;
+	font-weight: 500;
+	text-underline-offset: 4px;
+}
+
+.entry__plate {
+	margin: 0;
+}
+
+.entry__plate img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 4 / 5;
+	object-fit: cover;
+	background: var(--paper-deep);
+	border: 1px solid var(--rule);
+}
+
+.entry__plate figcaption {
+	margin-top: var(--space-2);
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.04em;
+}
+
+.entry__noplate {
+	display: grid;
+	place-items: center;
+	aspect-ratio: 4 / 5;
+	border: 1px dashed var(--rule);
+	background: var(--paper-deep);
+	color: var(--ink-faint);
+	font-size: 0.80rem;
+	font-style: italic;
+}
+
+.empty {
+	margin: 0;
+	padding: var(--space-7) var(--space-4);
+	text-align: center;
+	color: var(--ink-soft);
+	font-family: var(--display);
+	font-style: italic;
+	font-size: 1.1rem;
+}
+
+.empty code {
+	font-family: ui-monospace, Menlo, monospace;
+	font-style: normal;
+	font-size: 0.90rem;
+	color: var(--terracotta);
+}
+
+/* ---------- Colophon ---------- */
+
+.colophon {
+	max-width: 76rem;
+	margin: 0 auto;
+	padding: 0 var(--space-4) var(--space-6);
+	color: var(--ink-faint);
+	font-size: 0.76rem;
+}
+
+.colophon p {
+	margin: var(--space-3) 0 0;
+	max-width: 62ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

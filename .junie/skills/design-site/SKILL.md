@@ -209,19 +209,6 @@ Each line after the name is how to offer it:
 Copy the CSS and JS files into `web/assets/`, and the templ from the `.md` into `web/views/`, then
 make them look like the rest of their site.
 
-## Borrow from the themes
-
-The workshop's three themed pages show what the same sightings can become. Their code isn't in
-this copy, but git has it: `git ls-tree -r --name-only HEAD starter/cmd/themes` lists the files
-and `git show HEAD:<path>` reads one. When the brief calls for something they already do, reuse
-their approach, under `starter/cmd/themes/internal/`:
-
-- A map: that's the `map` block now. The themes show one in a finished page, and how their dark
-  ones invert the tiles in CSS.
-- A page with more going on: each theme's `props.go` has a `NewProps` that shapes the sightings
-  once for its `.templ`.
-- A header, nav and footer: each theme passes its own to the layout.
-
 ## Keep it building
 
 - Change files under `web/` only: views, assets, `web.go`, and files in `web/handlers/`. The
@@ -230,8 +217,7 @@ their approach, under `starter/cmd/themes/internal/`:
   the home page shows. Keep the home page at `/` listing sightings through `sightings.List` and
   showing each one's observers (`s.RecordedBy`, already tidied by the service), whether on a card,
   in a table row or in a map popup. The Profiling block measures exactly that.
-- Components take domain types directly, or props built from them once, the way the themes'
-  `NewProps` does. Helpers are plain Go functions in a file beside the `.templ` that uses them.
+- Components take domain types directly, or props built from them once. Helpers are plain Go functions in a file beside the `.templ` that uses them.
 - Don't comment templ components. A Go helper gets one short line at most, saying what it does.
 - Files under `web/assets/` are embedded and served at `/assets/`. The Docker build only runs
   `go build`, so there's no bundler: CSS and scripts are plain files there, and libraries such as

@@ -1,0 +1,648 @@
+/*
+ * Humpback Console — a dense, panelled dashboard.
+ *
+ * Where the Antarctic theme is a hairline instrument panel, this one is
+ * built from raised, rounded panels on a deep-water ground: a bento of
+ * charts around a map, then a picture wall, then the ledger. It commits
+ * to a dark palette.
+ */
+
+:root {
+	color-scheme: dark;
+
+	--ink: #e8f6fa;
+	--ink-dim: #9fbecb;
+	--ink-faint: #7a9eae;
+
+	--abyss: #04141b;
+	--deep: #08212c;
+	--panel: #0b2a37;
+	--raised: #0f3544;
+	--line: #164456;
+
+	--cyan: #22d3ee;
+	--cyan-soft: #67e8f9;
+	--kelp: #34d399;
+	--sand: #fbbf24;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 24px;
+	--space-6: 36px;
+
+	--radius: 10px;
+	--radius-sm: 6px;
+
+	--sans: "Fira Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+	--mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body.console {
+	margin: 0;
+	background:
+		radial-gradient(70rem 36rem at 80% -8%, #0d3a4c 0%, transparent 62%),
+		var(--abyss);
+	color: var(--ink);
+	font: 15px/1.6 var(--sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+h1, h2 {
+	margin: 0;
+	font-weight: 600;
+	letter-spacing: -0.015em;
+}
+
+a {
+	color: var(--cyan);
+}
+
+:focus-visible {
+	outline: 2px solid var(--cyan-soft);
+	outline-offset: 2px;
+}
+
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.skip {
+	position: absolute;
+	left: var(--space-4);
+	top: -4rem;
+	z-index: 1000;
+	padding: var(--space-3) var(--space-4);
+	border-radius: var(--radius-sm);
+	background: var(--cyan);
+	color: #04141b;
+	font-weight: 600;
+	text-decoration: none;
+	transition: top 160ms ease;
+}
+
+.skip:focus {
+	top: var(--space-4);
+}
+
+.dim {
+	color: var(--ink-faint);
+}
+
+/* ---------- Bar ---------- */
+
+.bar {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--space-3) var(--space-5);
+	background: rgba(4, 20, 27, 0.88);
+	backdrop-filter: blur(10px);
+	border-bottom: 1px solid var(--line);
+}
+
+.bar__brand {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--ink);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.bar__dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var(--cyan);
+	box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.16);
+}
+
+.bar__nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-1);
+}
+
+.bar__nav a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: var(--space-2) var(--space-3);
+	border-radius: var(--radius-sm);
+	color: var(--ink-dim);
+	font-size: 0.85rem;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background-color 160ms ease, color 160ms ease;
+}
+
+.bar__nav a:hover {
+	background: var(--raised);
+	color: var(--ink);
+}
+
+.bar__nav a[aria-current="page"] {
+	background: rgba(34, 211, 238, 0.14);
+	color: var(--cyan-soft);
+}
+
+/* ---------- Banner ---------- */
+
+main {
+	max-width: 90rem;
+	margin: 0 auto;
+	padding: var(--space-6) var(--space-5);
+	display: grid;
+	gap: var(--space-6);
+}
+
+.banner {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-5);
+	align-items: flex-end;
+	justify-content: space-between;
+}
+
+.banner__eyebrow {
+	margin: 0 0 var(--space-2);
+	color: var(--cyan);
+	font-family: var(--mono);
+	font-size: 0.80rem;
+	font-style: italic;
+	letter-spacing: 0.02em;
+}
+
+.banner__title {
+	font-size: clamp(2rem, 5vw, 3rem);
+	line-height: 1.05;
+	text-transform: capitalize;
+}
+
+.banner__sub {
+	margin: var(--space-3) 0 0;
+	max-width: 52ch;
+	color: var(--ink-dim);
+}
+
+.banner__stamp {
+	display: grid;
+	gap: 2px;
+	margin: 0;
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--panel);
+	text-align: right;
+}
+
+.banner__stamp span {
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.banner__stamp strong {
+	font-family: var(--mono);
+	font-size: 1.15rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--cyan-soft);
+}
+
+/* ---------- Metrics ---------- */
+
+.metrics {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+	gap: var(--space-3);
+}
+
+.metric {
+	padding: var(--space-4);
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: linear-gradient(180deg, var(--panel), var(--deep));
+	display: grid;
+	gap: var(--space-1);
+}
+
+.metric span {
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.metric strong {
+	font-family: var(--mono);
+	font-size: 1.7rem;
+	font-weight: 500;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink);
+}
+
+/* ---------- Panels ---------- */
+
+.panels {
+	display: grid;
+	gap: var(--space-4);
+	grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 60rem) {
+	.panels {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+
+	.panel--map {
+		grid-column: span 4;
+		grid-row: span 2;
+	}
+
+	.panel--chart {
+		grid-column: span 2;
+	}
+
+	.panel--board {
+		grid-column: span 2;
+	}
+}
+
+.panel {
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--panel);
+	overflow: hidden;
+	min-width: 0;
+}
+
+.panel__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2) var(--space-3);
+	align-items: baseline;
+	justify-content: space-between;
+	padding: var(--space-3) var(--space-4);
+	border-bottom: 1px solid var(--line);
+	background: var(--deep);
+}
+
+.panel__head h2 {
+	font-size: 0.85rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink);
+}
+
+.panel__head p {
+	margin: 0;
+	color: var(--ink-faint);
+	font-size: 0.76rem;
+}
+
+.panel__empty {
+	margin: 0;
+	padding: var(--space-6) var(--space-4);
+	color: var(--ink-dim);
+	text-align: center;
+	font-size: 0.88rem;
+}
+
+.panel__empty code {
+	font-family: var(--mono);
+	color: var(--cyan);
+}
+
+.panel__map {
+	height: min(58vh, 32rem);
+	background: var(--raised);
+}
+
+.panel__map.is-unavailable {
+	display: grid;
+	place-items: center;
+	height: 8rem;
+}
+
+.panel__map.is-unavailable::after {
+	content: "Map unavailable — the ledger below lists every record.";
+	color: var(--ink-faint);
+	font-size: 0.82rem;
+}
+
+.leaflet-container {
+	background: var(--raised);
+	font-family: var(--sans);
+}
+
+/* Every theme fetches the same OpenStreetMap tiles, because those are
+   the ones that need no API key. A dark theme darkens them here rather
+   than reaching for a dark basemap someone has to sign up for. The
+   filter is on the tiles alone, so markers and popups keep their
+   colours. */
+.leaflet-tile {
+	filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7);
+}
+
+.map-popup {
+	font-size: 0.82rem;
+	line-height: 1.5;
+}
+
+/* ---------- Year chart ---------- */
+
+.chart {
+	padding: var(--space-4);
+}
+
+.chart__plot {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	align-items: flex-end;
+	gap: 3px;
+	height: 9rem;
+}
+
+.chart__col {
+	flex: 1 1 0;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	align-items: center;
+	gap: var(--space-1);
+	height: 100%;
+}
+
+.chart__bar {
+	width: 100%;
+	height: var(--bar, 0%);
+	min-height: 2px;
+	border-radius: 2px 2px 0 0;
+	background: linear-gradient(180deg, var(--cyan), rgba(34, 211, 238, 0.35));
+}
+
+.chart__tip {
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink-dim);
+	order: -1;
+}
+
+.chart__year {
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	color: var(--ink-faint);
+}
+
+/* ---------- Boards ---------- */
+
+.board {
+	list-style: none;
+	margin: 0;
+	padding: var(--space-4);
+	display: grid;
+	gap: var(--space-3);
+}
+
+.board__row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto auto;
+	grid-template-areas:
+		"name num pct"
+		"track track track";
+	gap: var(--space-1) var(--space-3);
+	align-items: baseline;
+	font-size: 0.85rem;
+}
+
+.board__name {
+	grid-area: name;
+	overflow-wrap: anywhere;
+}
+
+.board__num {
+	grid-area: num;
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
+	color: var(--ink);
+}
+
+.board__pct {
+	grid-area: pct;
+	font-family: var(--mono);
+	font-size: 0.76rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--ink-faint);
+	min-width: 3ch;
+	text-align: right;
+}
+
+.board__track {
+	grid-area: track;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--raised);
+	overflow: hidden;
+}
+
+.board__fill {
+	display: block;
+	height: 100%;
+	width: var(--bar, 0%);
+	border-radius: 2px;
+	background: var(--cyan);
+}
+
+/* ---------- Section heads ---------- */
+
+.section__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2) var(--space-4);
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: var(--space-4);
+	padding-bottom: var(--space-3);
+	border-bottom: 1px solid var(--line);
+}
+
+.section__head h2 {
+	font-size: 1.05rem;
+}
+
+.section__head p {
+	margin: 0;
+	color: var(--ink-faint);
+	font-size: 0.82rem;
+}
+
+/* ---------- Picture wall ---------- */
+
+.wall__grid {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: var(--space-3);
+	grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.tile__link {
+	display: block;
+	position: relative;
+	border-radius: var(--radius-sm);
+	overflow: hidden;
+	border: 1px solid var(--line);
+	background: var(--raised);
+	text-decoration: none;
+	color: var(--ink);
+	cursor: pointer;
+	transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.tile__link:hover {
+	border-color: var(--cyan);
+	transform: translateY(-2px);
+}
+
+.tile__link img,
+.tile__blank {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	background: var(--raised);
+}
+
+.tile__meta {
+	display: grid;
+	gap: 1px;
+	padding: var(--space-2) var(--space-3);
+	background: var(--deep);
+}
+
+.tile__meta strong {
+	font-size: 0.82rem;
+	font-weight: 500;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tile__meta span {
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	color: var(--ink-faint);
+}
+
+/* ---------- Ledger ---------- */
+
+.ledger__scroll {
+	overflow-x: auto;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+}
+
+.ledger__table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.84rem;
+	background: var(--panel);
+}
+
+.ledger__table th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: var(--space-3);
+	background: var(--deep);
+	border-bottom: 1px solid var(--line);
+	color: var(--ink-faint);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	text-align: left;
+	white-space: nowrap;
+}
+
+.ledger__table td {
+	padding: var(--space-3);
+	border-bottom: 1px solid rgba(22, 68, 86, 0.6);
+	vertical-align: top;
+}
+
+.ledger__table tbody tr:hover {
+	background: var(--raised);
+}
+
+.ledger__table tbody tr:target {
+	background: rgba(34, 211, 238, 0.13);
+	outline: 1px solid var(--cyan);
+}
+
+.ledger__table .num {
+	font-family: var(--mono);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.ledger__observer {
+	max-width: 16rem;
+	overflow-wrap: anywhere;
+	color: var(--ink-dim);
+}
+
+/* ---------- Foot ---------- */
+
+.foot {
+	max-width: 90rem;
+	margin: 0 auto;
+	padding: var(--space-5);
+	border-top: 1px solid var(--line);
+	color: var(--ink-faint);
+	font-size: 0.76rem;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2) var(--space-5);
+	justify-content: space-between;
+}
+
+.foot p {
+	margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

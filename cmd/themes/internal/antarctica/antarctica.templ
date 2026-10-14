@@ -1,0 +1,201 @@
+package antarctica
+
+import (
+	"workshop/cmd/themes/internal/layout"
+	"workshop/cmd/themes/internal/themeutil"
+	"workshop/internal/domain/sighting"
+)
+
+templ Page(p Props) {
+	@layout.Base(layout.BaseProps{
+		Title:       "Antarctic Station — Sightings",
+		Description: "Cetacean sightings recorded in Antarctic waters, plotted and logged.",
+		Class:       "ice",
+		Fonts:       "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
+		Stylesheet:  "/assets/css/antarctica.css",
+		Skip:        layout.SkipLink{Target: "log", Label: "Skip to the station log"},
+		Header:      masthead(),
+		Footer:      footer(p),
+		Map:         &layout.MapProps{Points: p.Points},
+	}) {
+		@readout(p)
+		@chart(p)
+		<div class="split">
+			@log(p)
+			@rails(p)
+		</div>
+	}
+}
+
+// masthead names the station and links to the other themes.
+templ masthead() {
+	<header class="masthead">
+		<div class="masthead__id">
+			<span class="masthead__mark" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M12 2 4 20h16L12 2Z"></path>
+					<path d="M8.5 13h7"></path>
+				</svg>
+			</span>
+			<span>
+				<h1>Antarctic Station</h1>
+				<small>Southern Ocean cetacean log</small>
+			</span>
+		</div>
+		<nav class="masthead__nav" aria-label="Themes">
+			for _, l := range layout.Nav {
+				<a href={ templ.URL(l.Path) } aria-current={ l.Current("/antarctica") }>{ l.Title }</a>
+			}
+		</nav>
+	</header>
+}
+
+// readout is the instrument strip of headline figures.
+templ readout(p Props) {
+	<section class="readout" aria-label="Station summary">
+		@cell("Records", count(p.Summary.Sightings), "logged")
+		@cell("Species", count(p.Summary.Species), "distinct")
+		@cell("Localities", count(len(p.Localities)), "named")
+		@cell("Individuals", count(p.Summary.Individuals), "counted")
+		@cell("Observers", count(p.Summary.Recorders), "credited")
+		@cell("Span", themeutil.Span(p.Summary), "of records")
+	</section>
+}
+
+templ cell(label, value, note string) {
+	<div class="cell">
+		<span class="cell__label">{ label }</span>
+		<strong class="cell__value">{ value }</strong>
+		<span class="cell__note">{ note }</span>
+	</div>
+}
+
+// chart is the map the theme leads with. The records below are the
+// accessible equivalent, so the map is never the only way to read them.
+templ chart(p Props) {
+	<section class="chart" aria-labelledby="chart-title">
+		<div class="chart__head">
+			<h2 id="chart-title">Positions</h2>
+			<p>{ count(len(p.Points)) } located records. Every one is listed in the log below.</p>
+		</div>
+		if len(p.Points) > 0 {
+			<div
+				class="chart__map"
+				data-sightings-map
+				data-points="map-points"
+				data-marker-fill="#5BC8F5"
+				data-marker-stroke="#B9E6FB"
+				data-marker-radius="5"
+				data-max-zoom="6"
+				role="region"
+				aria-label="Map of Antarctic sightings. The same records are listed in the station log below."
+				tabindex="0"
+			></div>
+		} else {
+			<p class="chart__empty">No located records to plot.</p>
+		}
+	</section>
+}
+
+// log is the record table, the station's primary reading surface.
+templ log(p Props) {
+	<section class="log" id="log" aria-labelledby="log-title">
+		<div class="log__head">
+			<h2 id="log-title">Station log</h2>
+			<p>Newest first.</p>
+		</div>
+		if len(p.Sightings) == 0 {
+			<p class="empty">
+				No Antarctic records yet. Run <code>workshop sightings ingest</code> to fetch some.
+			</p>
+		} else {
+			<div class="log__scroll">
+				<table class="log__table">
+					<caption class="visually-hidden">
+						Every Antarctic sighting, newest first, with date, species, position and observer.
+					</caption>
+					<thead>
+						<tr>
+							<th scope="col"><span class="visually-hidden">Image</span></th>
+							<th scope="col">Date</th>
+							<th scope="col">Species</th>
+							<th scope="col">Locality</th>
+							<th scope="col">Position</th>
+							<th scope="col" class="num">Seen</th>
+							<th scope="col">Observer</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, s := range p.Sightings {
+							@row(s)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</section>
+}
+
+templ row(s sighting.Sighting) {
+	<tr id={ themeutil.Anchor(s) }>
+		<td class="log__thumb">
+			if url := themeutil.Thumbnail(s); url != "" {
+				<img src={ url } alt={ themeutil.AltText(s) } loading="lazy" decoding="async" width="44" height="44"/>
+			} else {
+				<span class="log__nothumb" aria-hidden="true"></span>
+			}
+		</td>
+		<td class="num">
+			<time datetime={ s.HappenedAt.Format("2006-01-02") }>{ s.HappenedAt.Format("2 Jan 2006") }</time>
+		</td>
+		<td>
+			<b>{ themeutil.DisplayName(s.Species) }</b>
+			<i>{ s.Species.ScientificName }</i>
+		</td>
+		<td>{ themeutil.Locale(s.Location) }</td>
+		<td class="num">{ themeutil.Coordinates(s.Location) }</td>
+		<td class="num">
+			if s.IndividualCount != nil {
+				{ count(*s.IndividualCount) }
+			} else {
+				<span class="muted">&mdash;</span>
+			}
+		</td>
+		<td class="log__observer">{ themeutil.Recorder(s) }</td>
+	</tr>
+}
+
+// rails hold the leaderboards beside the log.
+templ rails(p Props) {
+	<aside class="rails" aria-label="Breakdowns">
+		@tally("Species", p.Species, "records")
+		@tally("Localities", p.Localities, "records")
+		@tally("Observers", p.Observers, "records")
+	</aside>
+}
+
+templ tally(title string, rows []sighting.Tally, unit string) {
+	<section class="tally">
+		<h2>{ title }</h2>
+		if len(rows) == 0 {
+			<p class="muted">Nothing recorded.</p>
+		} else {
+			<ul>
+				for _, r := range rows {
+					<li>
+						<span class="tally__name">{ r.Name }</span>
+						<span class="tally__count">{ count(r.Count) } <span class="visually-hidden">{ unit }</span></span>
+						<span class="tally__bar" style={ bar(rows, r.Count) } aria-hidden="true"></span>
+					</li>
+				}
+			</ul>
+		}
+	</section>
+}
+
+templ footer(p Props) {
+	<footer class="foot">
+		<p>Occurrence data from GBIF. Basemap &copy; OpenStreetMap contributors.</p>
+		<p>Log generated { p.Now.Format("2 January 2006, 15:04") }.</p>
+	</footer>
+}
