@@ -50,12 +50,12 @@ test-race: # Run all tests with race
 	go clean -testcache && go test -race ./... -coverprofile=coverage.out -covermode=atomic
 .PHONY: test-race
 
-load: # Load test the home page for 20 seconds while make web runs
-	go tool hey -z 20s -c 10 http://localhost:8080/
+load: # Load test the home page for 10 seconds while make web runs
+	go tool hey -z 10s -c 10 http://localhost:8080/
 .PHONY: load
 
 # -j2 runs the CPU profile and the load at the same time.
-load-pprof: # Load test the home page for 20 seconds while make web runs, saving CPU and allocation profiles here
+load-pprof: # Load test the home page for 10 seconds while make web runs, saving CPU and allocation profiles here
 	$(MAKE) --no-print-directory -j2 profile-cpu load
 	go tool pprof -proto -output allocs.pprof http://localhost:6060/debug/pprof/allocs
 	@echo Profiles saved. Open one with:

@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// errInternal stands in for any unexpected failure from the data store.
 var errInternal = errors.New("internal error")
 
 var happenedAt = time.Date(2025, time.September, 22, 11, 12, 13, 0, time.UTC)
@@ -35,7 +34,6 @@ var happenedAt = time.Date(2025, time.September, 22, 11, 12, 13, 0, time.UTC)
 // them, so newCreateParams can name it without any plumbing.
 var testWeatherID = uuid.New()
 
-// lionKey is the GBIF taxon key the lion fixtures are recorded against.
 const lionKey = 5219404
 
 func setup(
@@ -142,7 +140,6 @@ func newCreateParams(speciesID uuid.UUID, gbifKey int64) sighting.CreateParams {
 	}
 }
 
-// create saves a sighting, asserting it round-tripped unchanged.
 func create(t *testing.T, ctx context.Context, svc *sighting.Service, in sighting.CreateParams) sighting.Sighting {
 	t.Helper()
 
@@ -338,18 +335,13 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("Invalid params are not persisted", func(t *testing.T) {
-		ctx, svc, speciesSvc := setup(t, false, nil, nil)
-		lion := seedLion(t, ctx, speciesSvc)
-
-		in := newCreateParams(lion.ID, 207)
+		ctx, svc, _ := setup(t, true, nil, nil)
+		in := newCreateParams(uuid.New(), 207)
 		in.Location.Latitude = 100
 
+		// The store would fail any call, so ErrInvalid proves it was never reached.
 		_, err := svc.Create(ctx, in)
-		require.ErrorIs(t, err, sighting.ErrInvalid)
-
-		got, err := svc.List(ctx, sighting.ListFilter{})
-		require.NoError(t, err)
-		assert.Empty(t, got)
+		assert.ErrorIs(t, err, sighting.ErrInvalid)
 	})
 
 	t.Run("Store error", func(t *testing.T) {

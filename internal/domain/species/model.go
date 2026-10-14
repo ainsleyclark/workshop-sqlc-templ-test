@@ -6,8 +6,8 @@ import (
 )
 
 type (
-	// Species represents a taxonomy record, it can be an animal
-	// or plant with various data points.
+	// Species represents a taxonomy record as GBIF classifies it.
+	// It can be an animal or a plant, at species rank or above.
 	Species struct {
 		ID             uuid.UUID `json:"id"`
 		GBIFKey        int       `json:"gbifKey"`
@@ -25,7 +25,8 @@ type (
 		CreatedAt      time.Time `json:"createdAt"`
 		UpdatedAt      time.Time `json:"updatedAt"`
 	}
-	// CreateParams contains the fields used to create a species.
+	// CreateParams represents the parameters required to
+	// create a new species.
 	CreateParams struct {
 		GBIFKey        int    `json:"gbifKey"`
 		Kingdom        string `json:"kingdom,omitzero"`

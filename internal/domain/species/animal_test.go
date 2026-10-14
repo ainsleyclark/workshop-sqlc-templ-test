@@ -13,12 +13,12 @@ func TestAnimal_TaxonKeys(t *testing.T) {
 		input Animal
 		want  []int
 	}{
-		"One species":                 {AnimalHumpbackWhale, []int{5220086}},
-		"Several species":             {AnimalZebra, []int{2440892, 2440888, 2440894}},
-		"A genus key":                 {AnimalGiraffe, []int{7716694}},
-		"A group and its own species": {AnimalAlligator, []int{2441370, 2441368}},
-		"Unknown animal":              {Animal("pangolin"), nil},
-		"Empty animal":                {Animal(""), nil},
+		"One species":                 {input: AnimalHumpbackWhale, want: []int{5220086}},
+		"Several species":             {input: AnimalZebra, want: []int{2440892, 2440888, 2440894}},
+		"A genus key":                 {input: AnimalGiraffe, want: []int{7716694}},
+		"A group and its own species": {input: AnimalAlligator, want: []int{2441370, 2441368}},
+		"Unknown animal":              {input: Animal("pangolin")},
+		"Empty animal":                {input: Animal("")},
 	}
 
 	for name, test := range tt {
@@ -45,9 +45,9 @@ func TestAnimal_Known(t *testing.T) {
 		input Animal
 		want  bool
 	}{
-		"Supported":   {AnimalLion, true},
-		"Unsupported": {Animal("pangolin"), false},
-		"Empty":       {Animal(""), false},
+		"Supported":   {input: AnimalLion, want: true},
+		"Unsupported": {input: Animal("pangolin")},
+		"Empty":       {input: Animal("")},
 	}
 
 	for name, test := range tt {

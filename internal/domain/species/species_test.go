@@ -20,6 +20,11 @@ import (
 
 var errInternal = errors.New("internal error")
 
+const (
+	lionKey  = 5219404
+	tigerKey = 5219416
+)
+
 func setup(t *testing.T, fail bool) (context.Context, *species.Service) {
 	t.Helper()
 
@@ -37,7 +42,7 @@ func setup(t *testing.T, fail bool) (context.Context, *species.Service) {
 	)
 }
 
-// newCreateParams returns a fully populated species.
+// newCreateParams returns a fully populated lion with the given GBIF key.
 func newCreateParams(gbifKey int) species.CreateParams {
 	return species.CreateParams{
 		GBIFKey:        gbifKey,
@@ -69,7 +74,7 @@ func create(t *testing.T, ctx context.Context, svc *species.Service, in species.
 func TestService_Find(t *testing.T) {
 	t.Run("Found", func(t *testing.T) {
 		ctx, svc := setup(t, false)
-		lion := create(t, ctx, svc, newCreateParams(5219404))
+		lion := create(t, ctx, svc, newCreateParams(lionKey))
 
 		got, err := svc.Find(ctx, lion.ID)
 		require.NoError(t, err)
@@ -94,9 +99,9 @@ func TestService_Find(t *testing.T) {
 func TestService_FindByGbifKey(t *testing.T) {
 	t.Run("Found", func(t *testing.T) {
 		ctx, svc := setup(t, false)
-		lion := create(t, ctx, svc, newCreateParams(5219404))
+		lion := create(t, ctx, svc, newCreateParams(lionKey))
 
-		got, err := svc.FindByGbifKey(ctx, 5219404)
+		got, err := svc.FindByGbifKey(ctx, lionKey)
 		require.NoError(t, err)
 		assert.Equal(t, lion, got)
 	})
@@ -111,7 +116,7 @@ func TestService_FindByGbifKey(t *testing.T) {
 	t.Run("Store error", func(t *testing.T) {
 		ctx, svc := setup(t, true)
 
-		_, err := svc.FindByGbifKey(ctx, 5219404)
+		_, err := svc.FindByGbifKey(ctx, lionKey)
 		assert.ErrorIs(t, err, errInternal)
 	})
 }
@@ -127,8 +132,8 @@ func TestService_List(t *testing.T) {
 
 	t.Run("Lists every species", func(t *testing.T) {
 		ctx, svc := setup(t, false)
-		lion := create(t, ctx, svc, newCreateParams(5219404))
-		tiger := create(t, ctx, svc, newCreateParams(5219448))
+		lion := create(t, ctx, svc, newCreateParams(lionKey))
+		tiger := create(t, ctx, svc, newCreateParams(tigerKey))
 
 		got, err := svc.List(ctx)
 		require.NoError(t, err)
@@ -146,7 +151,7 @@ func TestService_List(t *testing.T) {
 func TestService_Create(t *testing.T) {
 	t.Run("Creates species", func(t *testing.T) {
 		ctx, svc := setup(t, false)
-		in := newCreateParams(5219404)
+		in := newCreateParams(lionKey)
 
 		got, err := svc.Create(ctx, in)
 		require.NoError(t, err)
@@ -159,8 +164,8 @@ func TestService_Create(t *testing.T) {
 	t.Run("Assigns an identity", func(t *testing.T) {
 		ctx, svc := setup(t, false)
 
-		first := create(t, ctx, svc, newCreateParams(5219404))
-		second := create(t, ctx, svc, newCreateParams(5219448))
+		first := create(t, ctx, svc, newCreateParams(lionKey))
+		second := create(t, ctx, svc, newCreateParams(tigerKey))
 
 		assert.NotEqual(t, uuid.Nil(), first.ID)
 		assert.NotEqual(t, first.ID, second.ID)
@@ -168,7 +173,7 @@ func TestService_Create(t *testing.T) {
 
 	t.Run("Is retrievable once created", func(t *testing.T) {
 		ctx, svc := setup(t, false)
-		created := create(t, ctx, svc, newCreateParams(2435099))
+		created := create(t, ctx, svc, newCreateParams(lionKey))
 
 		got, err := svc.Find(ctx, created.ID)
 		require.NoError(t, err)
@@ -187,7 +192,7 @@ func TestService_Create(t *testing.T) {
 	t.Run("Store error", func(t *testing.T) {
 		ctx, svc := setup(t, true)
 
-		_, err := svc.Create(ctx, newCreateParams(5219404))
+		_, err := svc.Create(ctx, newCreateParams(lionKey))
 		assert.ErrorIs(t, err, errInternal)
 	})
 }

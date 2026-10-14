@@ -19,9 +19,7 @@ import (
 //go:embed assets
 var assets embed.FS
 
-// New returns a ServeMux serving the static assets and every handler's
-// own patterns. It is the one place that knows the whole site, so no
-// handler needs to know another.
+// New returns a ServeMux serving the static assets and handler's patterns.
 func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Service) *http.ServeMux {
 	mux := http.NewServeMux()
 
@@ -31,8 +29,6 @@ func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Servi
 	return mux
 }
 
-// assetsFs returns the embedded assets in production and the files on
-// disk otherwise, so CSS edits show without a rebuild.
 func assetsFs(prod bool) fs.FS {
 	if prod {
 		return assets

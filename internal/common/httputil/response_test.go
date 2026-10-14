@@ -9,7 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: These tests don't follow CODE_STYLE.md
+
 func TestWriteJSON(t *testing.T) {
+	t.Parallel()
+
 	for _, tt := range []struct {
 		name  string
 		value any
@@ -20,6 +24,7 @@ func TestWriteJSON(t *testing.T) {
 		{"string newline", "bird\n", `"bird\n"`},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			rec := httptest.NewRecorder()
 			httputil.WriteJSON(rec, http.StatusCreated, tt.value)
 			assert.Equal(t, http.StatusCreated, rec.Code)

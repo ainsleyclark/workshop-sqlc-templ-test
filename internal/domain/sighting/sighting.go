@@ -54,11 +54,11 @@ func NewService(
 	}
 }
 
-// SpeciesReadWriter is required by ingest to check if species
-// exists and create them if not.
+// SpeciesReadWriter is required by ingest to find species and
+// create the ones that don't exist yet.
 type SpeciesReadWriter interface {
-	FindByGbifKey(context.Context, int) (species.Species, error)
-	Create(context.Context, species.CreateParams) (species.Species, error)
+	FindByGbifKey(ctx context.Context, gbifKey int) (species.Species, error)
+	Create(ctx context.Context, params species.CreateParams) (species.Species, error)
 }
 
 // WeatherWriter is required by ingest to create weather records.

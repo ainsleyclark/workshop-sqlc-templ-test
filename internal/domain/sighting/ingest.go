@@ -64,33 +64,33 @@ type IngestShouldSkipFn func(occurrence gbif.Occurrence) bool
 // when calling the GBIF API.
 var ErrIngestNoResults = errors.New("no results found")
 
-// searchArgs renders the options as a GBIF occurrence search.
-func (o IngestRequest) searchArgs() gbif.OccurrencesSearchArgs {
+// searchArgs renders the request as a GBIF occurrence search.
+func (r IngestRequest) searchArgs() gbif.OccurrencesSearchArgs {
 	return gbif.OccurrencesSearchArgs{
-		Limit:       o.Limit,
-		Offset:      o.Offset,
-		Country:     o.Country.String(),
-		Latitude:    o.Latitude,
-		Longitude:   o.Longitude,
-		RadiusMiles: o.RadiusMiles,
-		DateFrom:    o.DateFrom,
-		DateTo:      o.DateTo,
-		TaxonKeys:   taxonKeys(o.Animals),
+		Limit:       r.Limit,
+		Offset:      r.Offset,
+		Country:     r.Country.String(),
+		Latitude:    r.Latitude,
+		Longitude:   r.Longitude,
+		RadiusMiles: r.RadiusMiles,
+		DateFrom:    r.DateFrom,
+		DateTo:      r.DateTo,
+		TaxonKeys:   taxonKeys(r.Animals),
 	}
 }
 
 // Ingest fetches occurrences from GBIF and saves them as sightings,
 // creating any species that don't exist yet.
-func (s Service) Ingest(ctx context.Context, opts IngestRequest) (IngestResult, error) {
-	remaining := opts.Limit
+func (s Service) Ingest(ctx context.Context, req IngestRequest) (IngestResult, error) {
+	remaining := req.Limit
 	out := IngestResult{Created: make([]Sighting, 0)}
 
 	for {
 		if remaining > 0 {
-			opts.Limit = min(remaining, 300)
+			req.Limit = min(remaining, 300)
 		}
 
-		res, err := s.gbif.Occurrences(ctx, opts.searchArgs())
+		res, err := s.gbif.Occurrences(ctx, req.searchArgs())
 		if err != nil {
 			return out, err
 		} else if res.Count == 0 && out.Fetched == 0 {
@@ -107,7 +107,7 @@ func (s Service) Ingest(ctx context.Context, opts IngestRequest) (IngestResult, 
 	result:
 		for _, v := range res.Results {
 			// Check if we're allowed to add the occurrence.
-			for _, shouldSkip := range opts.Skippers {
+			for _, shouldSkip := range req.Skippers {
 				if shouldSkip(v) {
 					out.Skipped++
 					continue result
@@ -148,8 +148,8 @@ func (s Service) Ingest(ctx context.Context, opts IngestRequest) (IngestResult, 
 		}
 
 		out.Fetched += len(res.Results)
-		if opts.OnPage != nil {
-			opts.OnPage(out.Fetched, res.Count)
+		if req.OnPage != nil {
+			req.OnPage(out.Fetched, res.Count)
 		}
 
 		remaining -= len(res.Results)
@@ -157,7 +157,7 @@ func (s Service) Ingest(ctx context.Context, opts IngestRequest) (IngestResult, 
 			break
 		}
 
-		opts.Offset += len(res.Results)
+		req.Offset += len(res.Results)
 	}
 
 	s.logger.InfoContext(ctx, "Successfully ingested sightings",
@@ -297,6 +297,8 @@ func (s Service) saveSighting(ctx context.Context, v gbif.Occurrence, speciesID,
 	return created, nil
 }
 
+// mediaPerSighting copies the occurrence's media, giving each item an ID
+// of its own.
 func mediaPerSighting(v gbif.Occurrence) []Media {
 	out := make([]Media, 0, len(v.Media))
 	for _, item := range v.Media {

@@ -16,25 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type fakeLister struct {
-	items []sighting.Sighting
-	err   error
-}
-
-func (f fakeLister) List(context.Context, sighting.ListFilter) ([]sighting.Sighting, error) {
-	return f.items, f.err
-}
-
-func serveHome(t *testing.T, lister handlers.SightingsLister) *httptest.ResponseRecorder {
-	t.Helper()
-
-	logger := logs.NewProduction(io.Discard, slog.LevelError)
-	rec := httptest.NewRecorder()
-	handlers.Home(logger, lister)(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
-
-	return rec
-}
-
 func TestHome(t *testing.T) {
 	t.Parallel()
 
@@ -62,4 +43,23 @@ func TestHome(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, got.Code)
 		assert.Equal(t, "text/html; charset=utf-8", got.Header().Get("Content-Type"))
 	})
+}
+
+type fakeLister struct {
+	items []sighting.Sighting
+	err   error
+}
+
+func (f fakeLister) List(context.Context, sighting.ListFilter) ([]sighting.Sighting, error) {
+	return f.items, f.err
+}
+
+func serveHome(t *testing.T, lister handlers.SightingsLister) *httptest.ResponseRecorder {
+	t.Helper()
+
+	logger := logs.NewProduction(io.Discard, slog.LevelError)
+	rec := httptest.NewRecorder()
+	handlers.Home(logger, lister)(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
+
+	return rec
 }

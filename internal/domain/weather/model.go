@@ -6,7 +6,7 @@ import (
 )
 
 type (
-	// Weather records the conditions at one moment and place. Once the
+	// Weather represents the conditions at one moment and place. Once the
 	// hour's weather has been fetched it never changes, so it is saved
 	// and read back rather than fetched again. A sighting points at it.
 	Weather struct {
@@ -49,8 +49,8 @@ type (
 		Code        int    `json:"code"`
 		Description string `json:"description"`
 	}
-	// CreateParams represents the parameters required to record
-	// the weather for a sighting.
+	// CreateParams represents the parameters required to
+	// create a new weather record.
 	CreateParams struct {
 		ObservedAt    time.Time     `json:"observedAt"`
 		Temperature   Temperature   `json:"temperature"`

@@ -170,9 +170,10 @@ Some ideas, if you want more than a restyle:
 We're running two competitions as part of this workshop, with prizes for each winner. It's entirely
 your choice to take part.
 
-- **1. Best Social Post**: post on LinkedIn and tag **@Ainsley Clark**, **@JetBrains** and
+- **1. Best Social Post**: post on LinkedIn or X and tag **@Ainsley Clark**, **@JetBrains** and
 **@GopherCon Africa**. A picture of you, what you made, the conference or anything you enjoyed.
-If you tried Air, we'd love to hear what you thought of it.
+If you tried Air, we'd love to hear what you thought of it: tag
+[**@getsome_air**](https://x.com/getsome_air) on X.
 - **2. Best Website**: the best design or function, built in your fork during the Theming block.
 It's judged on what's pushed to your fork by the end of the day, so `make push` before you leave,
 and check `make web` still builds: a site that doesn't build can't be judged.

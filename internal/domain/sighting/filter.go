@@ -13,9 +13,7 @@ type ListFilter struct {
 	ToDate   *time.Time
 	Country  country.Code
 	Animals  []species.Animal
-	// Limit caps how many sightings come back, newest first. Zero means
-	// no limit.
-	Limit int
+	Limit    int
 }
 
 // TaxonKeys returns the GBIF taxon keys the filter's animals stand for,
@@ -24,7 +22,8 @@ func (f ListFilter) TaxonKeys() []int {
 	return taxonKeys(f.Animals)
 }
 
-// taxonKeys retrieves the integers values according to the GBIF client.
+// taxonKeys returns the GBIF taxon keys the animals stand for, in order
+// and without repeats.
 func taxonKeys(animals []species.Animal) []int {
 	var keys []int
 	seen := make(map[int]bool)

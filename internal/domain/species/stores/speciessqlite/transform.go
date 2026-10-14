@@ -21,8 +21,8 @@ func transform(r db.Species) species.Species {
 		ScientificName: r.ScientificName,
 		CanonicalName:  r.CanonicalName,
 		VernacularName: r.VernacularName,
-		UpdatedAt:      r.UpdatedAt,
 		CreatedAt:      r.CreatedAt,
+		UpdatedAt:      r.UpdatedAt,
 	}
 }
 

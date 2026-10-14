@@ -51,8 +51,8 @@ func (s Service) Find(ctx context.Context, id uuid.UUID) (Species, error) {
 }
 
 // FindByGbifKey returns the species with the given GBIF key, or ErrNotFound.
-func (s Service) FindByGbifKey(ctx context.Context, key int) (Species, error) {
-	return s.store.FindByGbifKey(ctx, key)
+func (s Service) FindByGbifKey(ctx context.Context, gbifKey int) (Species, error) {
+	return s.store.FindByGbifKey(ctx, gbifKey)
 }
 
 // List returns every species in the data store.

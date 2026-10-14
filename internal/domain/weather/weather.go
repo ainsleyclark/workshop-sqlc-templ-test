@@ -34,12 +34,12 @@ func NewService(
 }
 
 var (
-	// ErrNotFound represents an error where no weather has been
-	// recorded.
+	// ErrNotFound represents an error where a weather record is
+	// not found in the data store.
 	ErrNotFound = errors.New("weather not found")
 
-	// ErrAlreadyExists represents an error where the weather has
-	// already been recorded.
+	// ErrAlreadyExists represents an error where a weather record with
+	// the same ID is already in the data store.
 	ErrAlreadyExists = errors.New("weather already exists")
 
 	// ErrInvalid represents an error where a weather record breaks
@@ -52,8 +52,8 @@ func (s Service) Find(ctx context.Context, id uuid.UUID) (Weather, error) {
 	return s.store.Find(ctx, id)
 }
 
-// Create validates the params and assigns the record its identity
-// before handing it to the store.
+// Create validates the params and assigns the weather record its
+// identity before handing it to the store.
 func (s Service) Create(ctx context.Context, params CreateParams) (Weather, error) {
 	if err := params.Validate(); err != nil {
 		return Weather{}, err

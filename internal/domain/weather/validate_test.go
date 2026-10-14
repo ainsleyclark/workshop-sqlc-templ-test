@@ -1,11 +1,11 @@
 package weather
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCreateParams_Validate(t *testing.T) {
@@ -80,12 +80,7 @@ func TestCreateParams_Validate(t *testing.T) {
 			test.mutate(&in)
 
 			err := in.Validate()
-			if len(test.wantErrs) == 0 {
-				assert.NoError(t, err)
-				return
-			}
-
-			require.ErrorIs(t, err, ErrInvalid)
+			assert.Equal(t, len(test.wantErrs) > 0, errors.Is(err, ErrInvalid))
 			for _, want := range test.wantErrs {
 				assert.ErrorContains(t, err, want)
 			}

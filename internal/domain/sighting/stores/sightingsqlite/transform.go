@@ -58,8 +58,8 @@ func transform(row db.SightingListRow) (sighting.Sighting, error) {
 			ScientificName: sp.ScientificName,
 			CanonicalName:  sp.CanonicalName,
 			VernacularName: sp.VernacularName,
-			UpdatedAt:      sp.UpdatedAt,
 			CreatedAt:      sp.CreatedAt,
+			UpdatedAt:      sp.UpdatedAt,
 		},
 		Weather: weather.Weather{
 			ID:         w.ID,

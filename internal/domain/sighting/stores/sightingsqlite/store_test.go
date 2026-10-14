@@ -306,7 +306,6 @@ func wantCreated(id uuid.UUID, in sighting.CreateParams, createdAt time.Time) si
 	}
 }
 
-// createWeather saves one hour's conditions for test sightings to point at.
 func createWeather(t *testing.T, ctx context.Context, queries db.Querier) weather.Weather {
 	t.Helper()
 
